@@ -1,0 +1,5 @@
+# Segredos locais (nunca suba pro GitHub)
+.env
+.env.*
+supabase/.temp/
+supabase/.branches/

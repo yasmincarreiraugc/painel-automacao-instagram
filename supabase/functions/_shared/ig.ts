@@ -17,7 +17,14 @@ export const db = createClient(
 );
 
 export const IG_ACCOUNT_ID = Deno.env.get("IG_ACCOUNT_ID") ?? "";
-export const GRAPH = `https://graph.instagram.com/${Deno.env.get("GRAPH_API_VERSION") || "v21.0"}`;
+const VERSAO = Deno.env.get("GRAPH_API_VERSION") || "v21.0";
+
+// O tipo do token decide qual API usar:
+//   IGAA... (login do Instagram) -> graph.instagram.com
+//   EAA...  (login do Facebook)  -> graph.facebook.com
+export const ehTokenFacebook = (token: string) => token.startsWith("EAA");
+export const graphBase = (token: string) =>
+  `https://graph.${ehTokenFacebook(token) ? "facebook" : "instagram"}.com/${VERSAO}`;
 
 // Cabeçalhos de CORS (pras funções que o painel chama).
 export const CORS = {
@@ -53,7 +60,7 @@ const HARD_CODES = [4, 17, 32, 368, 613];
 async function igFetch(method: "GET" | "POST", path: string, body?: unknown): Promise<IgResult> {
   try {
     const token = await getToken();
-    const res = await fetch(`${GRAPH}${path}`, {
+    const res = await fetch(`${graphBase(token)}${path}`, {
       method,
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,

@@ -1,5 +1,5 @@
 // =====================================================================
-// app.js: login, menu, Início, Métricas, lista de automações e Interações.
+// app.js: login, menu, Início, Análises, lista de automações e Interações.
 // O editor de automação fica no editor.js.
 // =====================================================================
 
@@ -40,6 +40,11 @@ const ICONS = {
   chat: '<path d="M4 5h16v11H8l-4 4z"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
   file: '<path d="M14 3H6v18h12V7zM14 3v4h4"/>',
+  refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  bookmark: '<path d="M6 3h12v18l-6-4-6 4z"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 13v4M8 21h8M9 17h6"/>',
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   grid: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a5.5 5.5 0 0 1 3.5 6"/>',
@@ -227,7 +232,7 @@ function irPara(pagina) {
   $("#app-view").classList.remove("menu-open");
   if (location.hash !== `#${pagina}`) history.replaceState(null, "", `#${pagina}`);
   if (pagina === "inicio") carregarResumo();
-  if (pagina === "instagram") abrirAba(store.get("aba_ig") || "metricas");
+  if (pagina === "instagram") abrirAba(store.get("aba_ig") || "analises");
 }
 
 $$(".nav [data-page]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.page)));
@@ -253,65 +258,241 @@ async function carregarResumo() {
 // INSTAGRAM: abas
 // =====================================================================
 function abrirAba(aba) {
+  if (aba === "metricas") aba = "analises"; // nome antigo da aba
+  if (!$(`[data-tab="${aba}"]`)) aba = "analises";
   store.set("aba_ig", aba);
   $$("[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === aba));
   $$("[data-tabpane]").forEach((p) => (p.hidden = p.dataset.tabpane !== aba));
-  if (aba === "metricas") carregarMetricas();
+  if (aba === "analises") carregarAnalises();
   if (aba === "automacoes") carregarAutomacoes();
   if (aba === "interacoes") carregarInteracoes();
 }
 $$("[data-tab]").forEach((b) => b.addEventListener("click", () => abrirAba(b.dataset.tab)));
 
 // ---------------------------------------------------------------------
-// Métricas
+// Análises: período, números da conta, gráficos, melhores posts e
+// quem mais comenta. Tudo vem da função ig-analytics (cache de 30 min).
 // ---------------------------------------------------------------------
-async function carregarMetricas() {
-  const box = $("#metricas");
-  box.innerHTML = `<p class="sub">Carregando...</p>`;
-  const [dados, leads] = await Promise.all([api.funcao("ig-insights"), api.contar("ig_leads")]);
+const analisesUI = { periodo: store.get("an_periodo") || "30", ordem: "melhores", dados: null };
+const PERIODOS_AN = [["7", "7 dias"], ["30", "30 dias"], ["90", "90 dias"], ["tudo", "Tudo"]];
+const ORDENS_AN = [
+  ["melhores", "Melhores"], ["curtidas", "Mais curtidos"], ["comentarios", "Mais comentados"],
+  ["salvos", "Mais salvos", true], ["views", "Mais vistos", true],
+];
+const nd = `<span class="nd" title="Precisa da permissão de insights do Instagram">sem dados</span>`;
+const numOuNd = (v) => (v === null || v === undefined ? nd : fmt(v));
 
-  const cartaoLeads = `<div class="card stat"><span class="label">Leads captados</span><div class="num">${fmt(leads)}</div><div class="foot">total no banco</div></div>`;
+async function carregarAnalises(atualizar = false) {
+  const box = $("#analises");
+  const pedido = analisesUI.periodo;
+  box.innerHTML = `${cabecalhoAnalises(analisesUI.dados)}<p class="sub">${atualizar ? "Buscando os números mais recentes no Instagram..." : "Carregando..."}</p>`;
+  ligarCabecalhoAnalises(box);
+  const dados = await api.funcao("ig-analytics", { periodo: pedido, atualizar });
+  if (pedido !== analisesUI.periodo) return; // trocou de período no meio
+  analisesUI.dados = dados;
 
   if (!dados || !dados.connected) {
-    box.innerHTML = `
-      <div class="grid stats" style="margin-bottom:16px">${cartaoLeads}</div>
+    box.innerHTML = `${cabecalhoAnalises(null)}
       <div class="card empty">
         <div class="ico">${icon("chart")}</div>
-        <h2>Conecte seu Instagram pra ver as métricas</h2>
-        <p>Assim que a conta estiver ligada (veja o LEIA-ME), aparecem aqui os seguidores, os novos seguidores por dia e o alcance.</p>
+        <h2>Não consegui ler o seu Instagram agora</h2>
+        <p>${dados?.erro ? `O Instagram respondeu: ${esc(dados.erro)}` : "Confira a conexão (veja o LEIA-ME) e toque em Atualizar."}</p>
       </div>`;
+    ligarCabecalhoAnalises(box);
     return;
   }
-
-  const soma = (arr) => (arr || []).reduce((t, d) => t + (d.value || 0), 0);
-  box.innerHTML = `
-    <div class="grid stats">
-      <div class="card stat"><span class="label">Seguidores</span><div class="num">${fmt(dados.followers)}</div><div class="foot">@${esc(dados.username)}</div></div>
-      <div class="card stat"><span class="label">Novos seguidores</span><div class="num">${fmt(soma(dados.new_followers))}</div><div class="foot">últimos 15 dias</div></div>
-      <div class="card stat"><span class="label">Alcance</span><div class="num">${fmt(soma(dados.reach))}</div><div class="foot">soma dos últimos 15 dias</div></div>
-      ${cartaoLeads}
-    </div>
-    <div class="grid charts">
-      <div class="card"><h2>Novos seguidores por dia</h2><p class="sub">Passe o mouse nas barras pra ver cada dia.</p><div class="chart" id="ch-seg"></div></div>
-      <div class="card"><h2>Alcance por dia</h2><p class="sub">Contas únicas alcançadas.</p><div class="chart" id="ch-alc"></div></div>
-    </div>`;
-  graficoBarras($("#ch-seg"), dados.new_followers, "novos seguidores");
-  graficoBarras($("#ch-alc"), dados.reach, "contas alcançadas");
+  renderAnalises();
 }
 
+function cabecalhoAnalises(d) {
+  const diasToken = d?.token_expira ? Math.ceil((new Date(d.token_expira) - Date.now()) / 86400000) : null;
+  const badges = d ? `
+      <span class="pill ${diasToken !== null && diasToken < 10 ? "warn" : "ok"}" title="Validade do token do Instagram">
+        <i class="dot"></i>${diasToken === null ? "Token conectado" : `Token ${diasToken} dias`}</span>
+      <span class="pill" title="Mensagens enviadas pelo robô nas últimas 24 horas">${icon("chat")} ${fmt(d.entregas24h)} entregas 24h</span>` : "";
+  return `
+    <div class="an-top">
+      <div class="periodos" role="group" aria-label="Período">
+        ${PERIODOS_AN.map(([v, t]) => `<button class="seg ${v === analisesUI.periodo ? "on" : ""}" data-periodo="${v}" aria-pressed="${v === analisesUI.periodo}">${t}</button>`).join("")}
+      </div>
+      <div class="an-badges">${badges}
+        <button class="btn sm" data-atualizar>${icon("refresh")} Atualizar</button>
+      </div>
+    </div>`;
+}
+function ligarCabecalhoAnalises(box) {
+  $$("[data-periodo]", box).forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.periodo === analisesUI.periodo) return;
+    analisesUI.periodo = b.dataset.periodo;
+    store.set("an_periodo", analisesUI.periodo);
+    carregarAnalises();
+  }));
+  $("[data-atualizar]", box)?.addEventListener("click", () => carregarAnalises(true));
+}
+
+function renderAnalises() {
+  const d = analisesUI.dados;
+  const box = $("#analises");
+  const t = d.totais;
+  const rotulo = d.dias ? `${d.dias}d` : "tudo";
+  const rotuloConta = d.dias ? `${d.dias}d` : "90d"; // insights da conta: no máximo 90 dias
+
+  const novosFoot = t.novos === null
+    ? "a contagem começou hoje"
+    : t.novosDesde ? `desde ${dataCurta(t.novosDesde + "T12:00:00")}` : `últimos ${Math.min(d.dias || 30, 30)} dias`;
+
+  box.innerHTML = `
+    ${cabecalhoAnalises(d)}
+    ${d.temInsights ? "" : `
+      <div class="banner">${icon("info")}<div><strong>Alcance, contas engajadas, salvos e visualizações</strong> aparecem quando o seu token tiver a permissão
+      <code>instagram_manage_insights</code>. O resto já funciona. Peça pra liberar e os números entram sozinhos.</div></div>`}
+    <div class="grid stats an-stats">
+      <div class="card stat"><span class="label">Seguidores</span><div class="num">${fmt(t.seguidores)}</div><div class="foot">@${esc(d.perfil.username)}</div></div>
+      <div class="card stat"><span class="label">Novos seguidores</span><div class="num ${t.novos < 0 ? "neg" : ""}">${t.novos === null ? nd : (t.novos > 0 ? "+" : "") + fmt(t.novos)}</div><div class="foot">${esc(novosFoot)}</div></div>
+      <div class="card stat"><span class="label">Alcance (${rotuloConta})</span><div class="num">${numOuNd(t.alcance)}</div><div class="foot">contas únicas alcançadas</div></div>
+      <div class="card stat"><span class="label">Contas engajadas</span><div class="num">${numOuNd(t.engajadas)}</div><div class="foot">interagiram com você (${rotuloConta})</div></div>
+      <div class="card stat"><span class="label">Interações (${rotulo})</span><div class="num">${fmt(t.interacoes)}</div>
+        <div class="foot">${t.interacoesFonte === "conta" ? "curtidas, comentários, salvos e mais" : `curtidas + comentários em ${fmt(t.postsNoPeriodo)} post(s)`}</div></div>
+    </div>
+
+    <div class="grid charts">
+      <div class="card"><h2>Alcance por dia</h2><p class="sub">Passe o mouse nas barras pra ver os números.</p><div class="chart" id="ch-alcance"></div></div>
+      <div class="card"><h2>Novos seguidores por dia</h2><p class="sub">Ganhos menos perdas de cada dia.</p><div class="chart" id="ch-novos"></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><h2>Curtidas e comentários por ${d.dias ? "dia" : "mês"} de publicação</h2>
+      <p class="sub">Soma das interações dos posts publicados em cada ${d.dias ? "dia" : "mês"}.</p><div class="chart" id="ch-posts"></div></div>
+
+    <div class="card an-posts" style="margin-top:16px">
+      <div class="an-posts-head">
+        <h2>${icon("trophy")} Melhores posts <span class="muted">(${d.dias ? `${d.dias} dias` : "todos"})</span></h2>
+        <div class="periodos" role="group" aria-label="Ordenar posts">
+          ${ORDENS_AN.map(([v, txt, precisa]) => {
+            const off = precisa && !d.temInsights;
+            return `<button class="seg ${v === analisesUI.ordem ? "on" : ""}" data-ordem-post="${v}" ${off ? `disabled title="Precisa da permissão de insights"` : ""}>${txt}</button>`;
+          }).join("")}
+        </div>
+      </div>
+      <div id="an-grade"></div>
+    </div>
+
+    <div class="grid charts" style="margin-top:16px">
+      <div class="card"><h2>${icon("chat")} Quem mais comenta</h2><p class="sub">Nos posts do período com mais comentários.</p><div id="an-comentaristas"></div></div>
+      <div class="card"><h2>${icon("instagram")} Perfil</h2>
+        <div class="an-perfil">
+          ${d.perfil.foto ? `<img src="${esc(d.perfil.foto)}" alt="" width="56" height="56">` : ""}
+          <div><strong>${esc(d.perfil.nome || "")}</strong><br><a href="https://www.instagram.com/${encodeURIComponent(d.perfil.username)}/" target="_blank" rel="noopener">@${esc(d.perfil.username)}</a></div>
+        </div>
+        <div class="an-mini">
+          <div><b>${fmt(d.perfil.posts)}</b><span>posts</span></div>
+          <div><b>${fmt(d.perfil.seguidores)}</b><span>seguidores</span></div>
+          <div><b>${fmt(d.perfil.seguindo)}</b><span>seguindo</span></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint an-rodape">${icon("refresh")} Última atualização: ${esc(dataHora(d.gerado_em))}. Os números ficam guardados por 30 minutos; toque em Atualizar pra buscar de novo.</p>`;
+
+  ligarCabecalhoAnalises(box);
+
+  if (d.temInsights) graficoBarras($("#ch-alcance"), d.series.alcance, "contas alcançadas");
+  else $("#ch-alcance").innerHTML = `<div class="soft-box">Precisa da permissão <code>instagram_manage_insights</code>.</div>`;
+
+  if (d.series.novos?.length) graficoBarras($("#ch-novos"), d.series.novos, "novos seguidores");
+  else $("#ch-novos").innerHTML = `<div class="soft-box">O painel guarda o total de seguidores 1 vez por dia. A primeira barra aparece amanhã.</div>`;
+
+  graficoBarras($("#ch-posts"), seriePosts(d), "curtidas e comentários", d.dias ? null : (s) => s.slice(5, 7) + "/" + s.slice(2, 4));
+
+  renderGradePosts();
+  renderComentaristas();
+  $$("[data-ordem-post]", box).forEach((b) => b.addEventListener("click", () => {
+    analisesUI.ordem = b.dataset.ordemPost;
+    $$("[data-ordem-post]", box).forEach((x) => x.classList.toggle("on", x === b));
+    renderGradePosts();
+  }));
+}
+
+// Curtidas + comentários agrupados por dia (ou por mês em "Tudo").
+function seriePosts(d) {
+  const chave = (iso) => {
+    const br = new Date(new Date(iso).getTime() - 3 * 3600000).toISOString();
+    return d.dias ? br.slice(0, 10) : br.slice(0, 7) + "-01";
+  };
+  const soma = new Map();
+  for (const p of d.posts) soma.set(chave(p.data), (soma.get(chave(p.data)) || 0) + p.curtidas + p.comentarios);
+  if (!d.dias) {
+    // Todos os meses entre o primeiro post e hoje (mês sem post = 0).
+    const meses = [...soma.keys()].sort();
+    const serie = [];
+    if (!meses.length) return serie;
+    const fim = new Date().toISOString().slice(0, 7);
+    for (let m = meses[0].slice(0, 7); m <= fim; ) {
+      serie.push({ date: m + "-01", value: soma.get(m + "-01") || 0 });
+      const [a, mm] = m.split("-").map(Number);
+      m = mm === 12 ? `${a + 1}-01` : `${a}-${String(mm + 1).padStart(2, "0")}`;
+    }
+    return serie;
+  }
+  const serie = [];
+  for (let i = d.dias - 1; i >= 0; i--) {
+    const dia = new Date(Date.now() - 3 * 3600000 - i * 86400000).toISOString().slice(0, 10);
+    serie.push({ date: dia, value: soma.get(dia) || 0 });
+  }
+  return serie;
+}
+
+function renderGradePosts() {
+  const d = analisesUI.dados;
+  const el = $("#an-grade");
+  if (!d.posts.length) { el.innerHTML = `<div class="soft-box">Nenhum post publicado nesse período.</div>`; return; }
+  const pontos = (p) => p.curtidas + p.comentarios * 2 + (p.salvos || 0) * 3 + (p.compartilhamentos || 0) * 3;
+  const valor = { melhores: pontos, curtidas: (p) => p.curtidas, comentarios: (p) => p.comentarios, salvos: (p) => p.salvos || 0, views: (p) => p.views || 0 }[analisesUI.ordem];
+  const lista = [...d.posts].sort((a, b) => valor(b) - valor(a)).slice(0, 12);
+  el.innerHTML = `<div class="an-grade">${lista.map((p, i) => `
+    <a class="an-post" href="${esc(p.link)}" target="_blank" rel="noopener" title="${esc(p.legenda)}">
+      <div class="thumb">
+        ${p.miniatura ? `<img src="${esc(p.miniatura)}" alt="" loading="lazy">` : ""}
+        <span class="pos">${i + 1}</span><span class="tipo">${esc(p.tipo)}</span>
+      </div>
+      <div class="met">
+        <span title="Curtidas">${icon("heart")} ${fmt(p.curtidas)}</span>
+        <span title="Comentários">${icon("chat")} ${fmt(p.comentarios)}</span>
+        ${p.salvos !== null ? `<span title="Salvos">${icon("bookmark")} ${fmt(p.salvos)}</span>` : ""}
+        ${p.views !== null ? `<span title="Visualizações">${icon("eye")} ${fmt(p.views)}</span>` : ""}
+      </div>
+      <div class="data">${esc(dataCurta(p.data))}</div>
+    </a>`).join("")}</div>`;
+}
+
+function renderComentaristas() {
+  const lista = analisesUI.dados.comentaristas || [];
+  const el = $("#an-comentaristas");
+  if (!lista.length) { el.innerHTML = `<div class="soft-box">Ninguém comentou nos posts desse período.</div>`; return; }
+  const max = lista[0].total;
+  el.innerHTML = `<ol class="an-rank">${lista.map((c, i) => `
+    <li>
+      <span class="pos">${i + 1}</span>
+      <a href="https://www.instagram.com/${encodeURIComponent(c.username)}/" target="_blank" rel="noopener">@${esc(c.username)}</a>
+      <span class="barra"><i style="width:${Math.max(6, (c.total / max) * 100)}%"></i></span>
+      <b>${fmt(c.total)}</b>
+    </li>`).join("")}</ol>`;
+}
+
+
 // Gráfico de barras simples em SVG, com tooltip no hover.
-function graficoBarras(el, serie, unidade) {
+function graficoBarras(el, serie, unidade, rotulo) {
   if (!serie || !serie.length) { el.innerHTML = `<div class="soft-box">Sem dados pra esse período.</div>`; return; }
   const W = 600, H = 160, base = 140, topo = 10;
   const max = Math.max(1, ...serie.map((d) => d.value));
+  if (serie.every((d) => !d.value)) { el.innerHTML = `<div class="soft-box">Sem dados pra esse período.</div>`; return; }
   const larg = W / serie.length;
   const barras = serie.map((d, i) => {
-    const h = Math.max(2, ((base - topo) * d.value) / max);
+    const h = d.value > 0 ? Math.max(2, ((base - topo) * d.value) / max) : 0;
     return `<rect class="bar" data-i="${i}" x="${i * larg + larg * 0.18}" y="${base - h}" width="${larg * 0.64}" height="${h}" rx="3"/>`;
   }).join("");
-  const dia = (s) => s.slice(8, 10) + "/" + s.slice(5, 7);
-  const eixo = serie.map((d, i) => (i % 3 === 0 || i === serie.length - 1)
-    ? `<text class="axis" x="${i * larg + larg / 2}" y="${H - 4}" text-anchor="middle">${dia(d.date)}</text>` : "").join("");
+  const dia = rotulo || ((s) => s.slice(8, 10) + "/" + s.slice(5, 7));
+  const passo = Math.max(1, Math.ceil(serie.length / 10));
+  const eixo = serie.map((d, i) => (i % passo === 0 || i === serie.length - 1)
+    ? `<text class="axis" x="${i === 0 ? 0 : i === serie.length - 1 ? W : i * larg + larg / 2}" y="${H - 4}" text-anchor="${i === 0 ? "start" : i === serie.length - 1 ? "end" : "middle"}">${dia(d.date)}</text>` : "").join("");
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${barras}${eixo}</svg><div class="tooltip" hidden></div>`;
 
   const tip = $(".tooltip", el);

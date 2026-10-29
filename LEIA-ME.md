@@ -48,6 +48,7 @@ são pra colocar no ar de verdade, com login e dados salvos.
    - `02_freio.sql`: as funções `take_send_slot` e `record_send_result`.
    - `03_rls.sql`: as regras de acesso.
    - `06_interacoes.sql`: contador de interações e a visão da aba Interações (`ig_leads_painel`).
+   - `07_analises.sql`: base da aba Análises (foto diária dos seguidores e cache). Troque SEU_PROJETO e SEU_SCHED_SECRET antes, igual ao 04.
    - (o `04_agendamento.sql` fica pro Passo 5)
 
 > **ATENÇÃO:** o `02_freio.sql` é obrigatório. Sem as funções do freio, ele falha

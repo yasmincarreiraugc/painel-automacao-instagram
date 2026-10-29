@@ -21,9 +21,9 @@ async function chamaIA(modo, corpo = {}) {
 // Aviso padrão quando falta a chave ou deu erro.
 function avisoIA(r) {
   if (r.codigo === "sem_chave" || r.codigo === "chave_invalida") {
-    return `<div class="card aviso-ia">${icon("spark")}<div><h2>Falta ligar o Claude</h2>
-      <p>Pra essa página funcionar, o painel precisa da sua chave da API do Claude (ela fica guardada em segredo no Supabase).
-      Me peça no chat: <em>"quero ligar o Claude no painel"</em> que eu te mostro o passo a passo.</p></div></div>`;
+    return `<div class="card aviso-ia">${icon("spark")}<div><h2>Atualização pelo chat</h2>
+      <p>Esse botão usa a chave paga do Claude, que ainda não foi ligada. Sem problema: esta página se atualiza sozinha todo dia à meia-noite,
+      e quando quiser na hora é só pedir no chat do Claude Code (ex: <em>"atualiza minha análise"</em>).</p></div></div>`;
   }
   return `<div class="soft-box">${esc(r.erro || "Algo deu errado.")}</div>`;
 }
@@ -429,9 +429,12 @@ window.Estrategia = (() => {
               </div>`).join("")}</div>
             <h2 class="secao">O plano pra chegar lá</h2>
             <ol class="plano">${(est.plano || []).map((p) => `<li><b>${esc(p.etapa)}</b><p>${esc(p.como)}</p></li>`).join("")}</ol>
+            ${(est.estilo || []).length ? `
+              <h2 class="secao">O jeito de gravar</h2>
+              <div class="estilo">${est.estilo.map((e) => `<div><b>${esc(e.regra)}</b><p>${esc(e.como)}</p></div>`).join("")}</div>` : ""}
             <div class="secao-linha"><h2 class="secao">Calendário de 30 dias</h2>
               ${(est.calendario || []).length < 30 && !montando ? `<button class="btn sm primary" id="estr-completar">${icon("spark")} Completar calendário</button>` : ""}</div>
-            <div class="calendario30">${(est.calendario || []).map((d) => `
+            ${semanasHtml(est.calendario || [], (d) => `
               <article class="dia30" data-dia="${d.dia}">
                 <div class="dia30-topo"><span class="dia30-n"><b>${d.dia}</b>${d.data ? `${esc(semana(d.data))} ${esc(d.data.slice(8, 10))}/${esc(d.data.slice(5, 7))}` : ""}</span>
                   <span class="fmt ${CORES_FORMATO[d.formato] || ""}">${esc(d.formato)}</span></div>
@@ -447,7 +450,7 @@ window.Estrategia = (() => {
                   <button class="btn sm" data-agenda="${d.dia}" title="Coloca na sua agenda nesse dia">${icon("calendar")} Agenda</button>
                   <button class="btn sm" data-rot="${d.dia}">${icon("file")} Roteiro</button>
                 </div>
-              </article>`).join("")}</div>`}
+              </article>`)}`}
         </div>
         <aside class="card estr-chat">
           <h2>${icon("chat")} Converse com o Claude</h2>
@@ -483,6 +486,31 @@ window.Estrategia = (() => {
       const d = est.calendario.find((x) => String(x.dia) === b.dataset.rot);
       viraRoteiro(d.tema, d.gancho, `${d.ideia}\n\nStories:\n${(d.stories || []).map((s) => "- " + s).join("\n")}\n\nLegenda/CTA: ${d.legenda_cta || ""}`);
     }));
+  }
+
+  // Calendário agrupado por semana (usa "semana" do dia ou calcula de 7 em 7),
+  // com o título, o foco e a meta de cada semana quando existirem.
+  function semanasHtml(dias, cartao) {
+    const grupos = new Map();
+    dias.forEach((d) => {
+      const n = d.semana || Math.ceil(d.dia / 7);
+      if (!grupos.has(n)) grupos.set(n, []);
+      grupos.get(n).push(d);
+    });
+    return [...grupos.entries()].sort((a, b) => a[0] - b[0]).map(([n, ds]) => {
+      const info = (est.semanas || []).find((s) => s.numero === n);
+      const ini = ds[0]?.data, fim = ds[ds.length - 1]?.data;
+      const periodo = ini && fim ? `${ini.slice(8, 10)}/${ini.slice(5, 7)} a ${fim.slice(8, 10)}/${fim.slice(5, 7)}` : "";
+      return `
+        <section class="semana">
+          <header class="semana-topo">
+            <span class="semana-n">Semana ${n}</span>
+            <div><h3>${esc(info?.titulo || "")}</h3>${info?.foco ? `<p>${esc(info.foco)}</p>` : ""}</div>
+            <div class="semana-lado"><small>${esc(periodo)}</small>${info?.meta ? `<span>${esc(info.meta)}</span>` : ""}</div>
+          </header>
+          <div class="calendario30">${ds.map(cartao).join("")}</div>
+        </section>`;
+    }).join("");
   }
 
   async function montar(pedido) {

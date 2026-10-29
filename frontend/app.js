@@ -244,7 +244,7 @@ const PAGINAS = ["inicio", "calendario", "roteiros", "campanhas", "analista", "i
 function irPara(pagina) {
   if (!PAGINAS.includes(pagina)) pagina = "inicio";
   $$("[data-section]").forEach((s) => (s.hidden = s.dataset.section !== pagina));
-  $$(".nav [data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === pagina));
+  $$("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === pagina));
   $("#app-view").classList.remove("menu-open");
   if (location.hash !== `#${pagina}`) history.replaceState(null, "", `#${pagina}`);
   window.scrollTo(0, 0);
@@ -253,6 +253,10 @@ function irPara(pagina) {
   if (pagina === "roteiros") window.Roteiros?.abrir();
   if (pagina === "campanhas") window.Campanhas?.abrir();
   if (pagina === "portfolio") window.Portfolio?.abrir();
+  if (pagina === "analista") window.Analista?.abrir();
+  if (pagina === "quadros") window.Quadros?.abrir();
+  if (pagina === "emalta") window.EmAlta?.abrir();
+  if (pagina === "estrategia") window.Estrategia?.abrir();
   if (pagina === "instagram") abrirAba(store.get("aba_ig") || "analises");
   const sec = $(`[data-section="${pagina}"]`);
   if (sec?.dataset.embreve && !sec.innerHTML.trim()) emBreve(sec);
@@ -272,7 +276,8 @@ function emBreve(sec) {
     </div>`;
 }
 
-$$(".nav [data-page]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.page)));
+$$("[data-page]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.page)));
+$("#tab-mais").addEventListener("click", () => $("#app-view").classList.add("menu-open"));
 $$("[data-go]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.go)));
 $("#menu-toggle").addEventListener("click", () => $("#app-view").classList.toggle("menu-open"));
 // =====================================================================

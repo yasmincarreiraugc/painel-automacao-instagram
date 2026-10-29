@@ -51,6 +51,7 @@ são pra colocar no ar de verdade, com login e dados salvos.
    - `07_analises.sql`: base da aba Análises (foto diária dos seguidores e cache). Troque SEU_PROJETO e SEU_SCHED_SECRET antes, igual ao 04.
    - `08_agenda_e_site.sql`: a agenda (tabela `tarefas`) e as métricas do site do portfólio (`site_eventos` e `site_resumo`).
    - `09_roteiros_campanhas.sql`: campanhas, roteiros e ajustes do painel (meta de seguidores).
+   - `10_permuta_ia.sql`: permuta e nicho nas campanhas, quadros, em alta e a conversa da estratégia.
    - (o `04_agendamento.sql` fica pro Passo 5)
 
 > **ATENÇÃO:** o `02_freio.sql` é obrigatório. Sem as funções do freio, ele falha
@@ -222,3 +223,14 @@ requisições sem a assinatura correta do Meta são recusadas.
 - [ ] Webhook no Meta com `comments`, `messages` e `messaging_postbacks` assinados
 - [ ] Teste com uma segunda conta
 - [ ] `APP_SECRET_ENFORCE=true`
+
+## Inteligência artificial (Analista, Quadros, Em alta, Estratégia)
+
+Essas páginas usam o Claude pela função `claude-ia`. Ela precisa do segredo:
+
+```
+ANTHROPIC_API_KEY=sua chave do console.anthropic.com
+```
+
+Coloque em Supabase > Edge Functions > Secrets (ou `supabase secrets set ANTHROPIC_API_KEY=...`).
+Cada análise custa poucos centavos de dólar; a pesquisa do Em alta usa busca na web e custa um pouco mais.

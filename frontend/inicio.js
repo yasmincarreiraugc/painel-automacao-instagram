@@ -34,7 +34,7 @@ window.Inicio = (() => {
     esqueleto();
 
     const seguro = (p) => p.catch((e) => { console.warn(e); return null; });
-    const [tarefas, roteiros, campanhas, ig30, ig90, site, meta, leads] = await Promise.all([
+    const [tarefas, roteiros, campanhas, ig30, ig90, site, meta] = await Promise.all([
       seguro(window.Agenda.listar(hoje, somaDias(hoje, 7))),
       seguro(tabela("roteiros", "updated_at").listar()),
       seguro(window.Campanhas.carregar()),
@@ -42,9 +42,8 @@ window.Inicio = (() => {
       seguro(api.funcao("ig-analytics", { periodo: "90" })),
       sb ? seguro(sb.rpc("site_resumo", { p_dias: 30 }).then((r) => r.data)) : null,
       seguro(config.ler("meta_seguidores")),
-      seguro(api.contar("ig_leads", (q) => q.gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()))),
     ]);
-    d = { hoje, tarefas: tarefas || [], roteiros: roteiros || [], campanhas: campanhas || [], ig30, ig90, site, meta, leads };
+    d = { hoje, tarefas: tarefas || [], roteiros: roteiros || [], campanhas: campanhas || [], ig30, ig90, site, meta };
     render();
   }
 
@@ -76,8 +75,8 @@ window.Inicio = (() => {
         <small>${t30 ? `últimos 30 dias · ${fmt(t30.seguidores)} no total` : MSG_SEM_IG}</small></div>
       <div class="tom amarelo"><span>Alcance em 30 dias</span><b>${t30?.alcance != null ? fmt(t30.alcance) : "..."}</b>
         <small>${t30 ? "contas únicas que viram você" : MSG_SEM_IG}</small></div>
-      <div class="tom azul"><span>Leads em 30 dias</span><b>${fmt(d.leads || 0)}</b>
-        <small>pessoas que comentaram a palavra ou chamaram no direct</small></div>
+      <div class="tom azul"><span>Marcas trabalhadas</span><b>${fmt(window.Campanhas.resumo(d.campanhas).marcas)}</b>
+        <small>marcas diferentes que já fecharam com você</small></div>
       <div class="tom creme"><span>Visitas do site</span><b>${fmt(d.site?.pessoas || 0)}</b>
         <small>pessoas no seu portfólio em 30 dias</small></div>`;
 

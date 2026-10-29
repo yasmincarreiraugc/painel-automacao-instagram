@@ -2,9 +2,16 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Yasmin Carreira | Painel</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -3 46 46'%3E%3Cpath d='M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z' fill='%23ff99d9' stroke='%231e1915' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#f5f2ed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Yasmin">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icone-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@500;700&family=Montserrat:wght@400;500;600;700&display=swap">
@@ -127,10 +134,56 @@
     </section>
 
     <!-- Páginas que ainda vão ganhar conteúdo -->
-    <section data-section="analista" hidden data-embreve="Analista|O que está funcionando no seu conteúdo, com sugestões do que repetir e do que ajustar."></section>
-    <section data-section="quadros" hidden data-embreve="Quadros|Os seus quadros fixos de conteúdo, com a frequência e o que já foi ao ar em cada um."></section>
-    <section data-section="emalta" hidden data-embreve="Em alta|Trends, pautas e achados do momento, separados por tema, prontos pra virar roteiro."></section>
-    <section data-section="estrategia" hidden data-embreve="Estratégia|Os seus objetivos do mês, os pilares de conteúdo e o plano pra chegar lá."></section>
+    <!-- Analista (Claude) -->
+    <section data-section="analista" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Sua especialista em Instagram</p>
+          <h1 class="titulo-grande">O que está <mark>funcionando</mark></h1>
+          <p class="sub">O Claude olha seus posts e números e diz o que repetir e o que ajustar.</p>
+        </div>
+        <button class="btn primary" id="analista-gerar"><span data-icon="spark"></span> Gerar nova análise</button>
+      </div>
+      <div id="analista-conteudo"></div>
+    </section>
+
+    <!-- Quadros -->
+    <section data-section="quadros" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Séries fixas de conteúdo</p>
+          <h1 class="titulo-grande">Seus <mark class="azul">quadros</mark></h1>
+          <p class="sub">Marque os vídeos de cada quadro e veja se ele está funcionando.</p>
+        </div>
+        <button class="btn primary" id="quadro-novo"><span data-icon="plus"></span> Novo quadro</button>
+      </div>
+      <div id="quadros-conteudo"></div>
+    </section>
+
+    <!-- Em alta -->
+    <section data-section="emalta" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Pesquisa do Claude</p>
+          <h1 class="titulo-grande">O que tá <mark>em alta</mark></h1>
+          <p class="sub">Trends, pautas e achados do momento, separados por tema, prontos pra virar roteiro.</p>
+        </div>
+        <div id="emalta-info"></div>
+      </div>
+      <div id="emalta-conteudo"></div>
+    </section>
+
+    <!-- Estratégia -->
+    <section data-section="estrategia" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Plano de 30 dias</p>
+          <h1 class="titulo-grande">Sua <mark class="amarelo">estratégia</mark></h1>
+          <p class="sub">Pilares de conteúdo, o plano pra chegar lá e o que postar em cada dia.</p>
+        </div>
+      </div>
+      <div id="estrategia-conteudo"></div>
+    </section>
     <section data-section="criarposts" hidden data-embreve="Criar posts|Monte posts e carrosséis com a sua identidade visual, prontos pra publicar."></section>
     <section data-section="criarvideos" hidden data-embreve="Criar vídeos|Organize as cenas, o texto e as legendas dos seus vídeos antes de gravar."></section>
     <section data-section="site" hidden data-embreve="Site|O seu site yasmincarreira.com: mensagens recebidas e o que atualizar."></section>
@@ -255,6 +308,15 @@
       </div>
     </section>
   </main>
+
+  <!-- Celular: barra de atalhos embaixo, como um app -->
+  <nav class="tabbar" aria-label="Atalhos">
+    <button data-page="inicio"><span data-icon="home"></span>Início</button>
+    <button data-page="calendario"><span data-icon="calendar"></span>Agenda</button>
+    <button data-page="roteiros"><span data-icon="file"></span>Roteiros</button>
+    <button data-page="campanhas"><span data-icon="briefcase"></span>Campanhas</button>
+    <button id="tab-mais"><span data-icon="menu"></span>Mais</button>
+  </nav>
 </div>
 
 <!-- Editor de automação (tela cheia, montado pelo editor.js) -->
@@ -267,5 +329,6 @@
 <script src="paginas.js"></script>
 <script src="negocio.js"></script>
 <script src="inicio.js"></script>
+<script src="ia.js"></script>
 </body>
 </html>

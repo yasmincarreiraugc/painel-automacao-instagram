@@ -117,7 +117,7 @@ async function handleComment(v: any) {
     const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { count } = await db.from("ig_deliveries").select("id", { count: "exact", head: true })
       .eq("ig_user_id", userId).eq("canal", "private_reply").in("status", ["ok", "na_fila"]).gte("ts", desde);
-    if ((count ?? 0) > 0) { console.log(`pulando ${userId}: já recebeu DM nas últimas 24h`); return; }
+    if ((count ?? 0) > 0) { console.log(`pulando ${userId}: já recebeu DM nas últimas 24h`); await registraInteracao(userId, username); return; }
   }
 
   // 5) Entrega.
@@ -138,6 +138,7 @@ async function handleComment(v: any) {
       automation_id: auto.id,
       updated_at: new Date().toISOString(),
     }, { onConflict: "ig_user_id" });
+    await registraInteracao(userId, username);
   }
 }
 
@@ -212,6 +213,7 @@ async function handleMessage(ev: any) {
     if (!auto || !auto.active) return;
     const step = findStep(auto, stepId);
     if (!step) return;
+    await registraInteracao(senderId);
     await enviaPassoPorDM(senderId, auto, step);
     return;
   }
@@ -222,6 +224,7 @@ async function handleMessage(ev: any) {
   const { data: lead } = await db.from("ig_leads").select("*").eq("ig_user_id", senderId).maybeSingle();
   const exp = lead?.expecting;
   if (!exp?.field) return; // silêncio: não bate com nada
+  await registraInteracao(senderId);
 
   const valor = texto.trim();
   if (!dadoValido(exp.field, valor)) {
@@ -260,4 +263,10 @@ function dadoValido(campo: string, v: string) {
   if (campo === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
   if (campo === "telefone") return v.replace(/\D/g, "").length >= 10;
   return v.length > 0;
+}
+
+// Soma 1 na coluna "Interações" do lead (aba Interações do painel).
+async function registraInteracao(userId: string, username = "") {
+  const { error } = await db.rpc("ig_registra_interacao", { p_user: userId, p_username: username });
+  if (error) console.warn("falha ao registrar interação:", error.message);
 }

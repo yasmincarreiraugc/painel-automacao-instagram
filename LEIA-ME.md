@@ -47,6 +47,7 @@ são pra colocar no ar de verdade, com login e dados salvos.
    - `01_tabelas.sql`: as tabelas (inclui a linha inicial do freio em `ig_send_budget`).
    - `02_freio.sql`: as funções `take_send_slot` e `record_send_result`.
    - `03_rls.sql`: as regras de acesso.
+   - `06_interacoes.sql`: contador de interações e a visão da aba Interações (`ig_leads_painel`).
    - (o `04_agendamento.sql` fica pro Passo 5)
 
 > **ATENÇÃO:** o `02_freio.sql` é obrigatório. Sem as funções do freio, ele falha
@@ -109,7 +110,8 @@ supabase functions deploy ig-media
 2. Rode no SQL Editor. Ele liga as extensões `pg_cron` e `pg_net` e agenda:
    - `ig-scheduler` a cada 1 minuto;
    - `ig-token-refresh` toda segunda às 06:00 (UTC).
-3. Pra conferir: `select * from cron.job_run_details order by start_time desc limit 20;`
+3. Depois do 04, rode também o `05_retencao.sql`: apaga dados com mais de 12 meses, como promete a Política de Privacidade.
+4. Pra conferir: `select * from cron.job_run_details order by start_time desc limit 20;`
 
 ## Passo 6: app no Meta for Developers
 

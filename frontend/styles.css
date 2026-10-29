@@ -211,6 +211,41 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .auto-row .info { flex: 1; min-width: 0; }
 .auto-row .kws { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 .auto-row .acts { display: flex; align-items: center; gap: 6px; }
+/* Miniatura do post vinculado */
+.auto-thumb {
+  position: relative; flex: none; width: 52px; height: 52px; border-radius: 8px; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  display: flex; align-items: center; justify-content: center; text-decoration: none;
+}
+.auto-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.auto-thumb .mais {
+  position: absolute; right: 3px; bottom: 3px; background: rgba(17,17,17,.75); color: #fff;
+  font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 99px;
+}
+.auto-thumb.todos { font-size: 10px; font-weight: 600; text-align: center; line-height: 1.15; padding: 4px; }
+
+/* ---------- Interações (planilha de leads) ---------- */
+.leads-card { padding: 0; overflow: hidden; }
+.leads-toolbar { display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.leads-toolbar input[type="search"] { flex: 1 1 240px; min-width: 0; }
+.leads-toolbar select { flex: 0 1 190px; width: auto; }
+.leads-card .hint { padding: 0 16px 14px; }
+.table-wrap { overflow-x: auto; }
+.leads-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.leads-table th, .leads-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; white-space: nowrap; }
+.leads-table th { position: sticky; top: 0; background: var(--bg); font-size: 12px; color: var(--muted); font-weight: 600; }
+.leads-table th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+.leads-table th button:focus-visible { outline: 2px solid var(--accent); border-radius: 4px; }
+.leads-table th[aria-sort] { color: var(--text); }
+.leads-table tbody tr:hover { background: #FAFBFC; }
+.leads-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.leads-table .user a { font-weight: 600; text-decoration: none; }
+.leads-table .user small { display: block; color: var(--muted); font-size: 11px; }
+.leads-table .contato a { display: block; text-decoration: none; }
+.leads-table .lead-tags { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal; min-width: 140px; }
+.leads-table .lead-tags .chip { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.leads-table .lead-tags input { height: 28px; font-size: 12px; min-width: 150px; }
+.leads-table .muted { color: var(--muted); }
 
 /* ---------- Toast ---------- */
 #toast {

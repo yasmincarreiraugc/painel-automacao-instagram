@@ -107,6 +107,7 @@
       <div class="tabs">
         <button data-tab="metricas">Métricas</button>
         <button data-tab="automacoes">Automações</button>
+        <button data-tab="interacoes">Interações</button>
       </div>
       <div data-tabpane="metricas" id="metricas"></div>
       <div data-tabpane="automacoes" hidden>
@@ -115,6 +116,26 @@
           <button class="btn primary" id="nova-automacao"><span data-icon="plus"></span> Nova automação</button>
         </div>
         <div id="lista-automacoes"></div>
+      </div>
+      <div data-tabpane="interacoes" hidden>
+        <div id="interacoes-resumo" class="grid stats" style="margin-bottom:16px"></div>
+        <div class="card leads-card">
+          <div class="leads-toolbar">
+            <input type="search" id="lead-busca" class="input" placeholder="Buscar por @, e-mail, telefone ou palavra" aria-label="Buscar leads">
+            <select id="lead-origem" class="input" aria-label="Filtrar por origem">
+              <option value="">Todas as origens</option>
+              <option value="comment">Comentário</option>
+              <option value="dm">Direct</option>
+              <option value="story_reply">Resposta ao story</option>
+            </select>
+            <select id="lead-etiqueta" class="input" aria-label="Filtrar por etiqueta">
+              <option value="">Todas as etiquetas</option>
+            </select>
+            <button class="btn" id="lead-csv"><span data-icon="download"></span> Baixar planilha</button>
+          </div>
+          <div class="table-wrap" id="leads-tabela"></div>
+          <p class="hint" id="leads-rodape"></p>
+        </div>
       </div>
     </section>
   </main>

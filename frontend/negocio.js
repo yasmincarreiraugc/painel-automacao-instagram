@@ -417,7 +417,7 @@ window.Roteiros = (() => {
                 ${r.gancho ? `<p>"${esc(r.gancho.slice(0, 110))}${r.gancho.length > 110 ? "..." : ""}"</p>` : ""}
                 ${r.data_gravacao ? `<small>${icon("video")} gravar ${diaMes(r.data_gravacao)}</small>` : ""}
               </article>`).join("")}
-            ${e.id === "ideia" ? `<button class="rot-add" data-rot-novo>${icon("plus")} Nova ideia</button>` : ""}
+            ${e.id === "ideia" ? `<button class="rot-add" data-rot-novo>${icon("plus")} Novo roteiro</button>` : ""}
           </section>`;
         }).join("")}
       </div>`;
@@ -440,7 +440,7 @@ window.Roteiros = (() => {
         <div class="dialogo-linha quatro">
           <div><label class="label" for="ro-status">Etapa</label><select class="input" id="ro-status">${ETAPAS.map((e) => `<option value="${e.id}" ${(r?.status || "ideia") === e.id ? "selected" : ""}>${e.nome}</option>`).join("")}</select></div>
           <div><label class="label" for="ro-formato">Formato</label><select class="input" id="ro-formato">${FORMATOS.map((f) => `<option ${(r?.formato || "reels") === f ? "selected" : ""}>${f}</option>`).join("")}</select></div>
-          <div><label class="label" for="ro-camp">Campanha</label><select class="input" id="ro-camp"><option value="">Conteúdo próprio</option>${campanhas.map((c) => `<option value="${c.id}" ${r?.campanha_id === c.id ? "selected" : ""}>${esc(c.marca)}</option>`).join("")}</select></div>
+          <div><label class="label" for="ro-camp">Marca / campanha</label><select class="input" id="ro-camp"><option value="">Sem campanha cadastrada</option>${campanhas.map((c) => `<option value="${c.id}" ${r?.campanha_id === c.id ? "selected" : ""}>${esc(c.marca)}</option>`).join("")}</select></div>
           <div><label class="label" for="ro-data">Gravar em</label><input class="input" id="ro-data" type="date" value="${r?.data_gravacao || ""}"></div>
         </div>
         <label class="label" for="ro-gancho">Gancho <span class="nota">os 3 primeiros segundos decidem tudo</span></label>

@@ -8,7 +8,7 @@
 //   POST {tipo:"estrategia", dados}  -> painel_config.estrategia
 // Publique com --no-verify-jwt (quem protege é a ROTINA_KEY).
 // =====================================================================
-import { db, json } from "../_shared/ig.ts";
+import { db, igGet, json } from "../_shared/ig.ts";
 
 const TEMAS = ["ugc", "autocuidado", "rotina", "reforma", "mae", "fitness"];
 const corta = (s: unknown, n: number) => String(s ?? "").slice(0, n);
@@ -21,6 +21,29 @@ async function analytics(periodo: string) {
   });
   return await res.json().catch(() => null);
 }
+// Quadros com os números e os comentários de cada vídeo marcado.
+async function quadrosComPosts() {
+  const { data: qs } = await db.from("quadros").select("id, nome, descricao, media_ids, analise, analisado_em");
+  return await Promise.all((qs ?? []).map(async (q) => ({
+    id: q.id, nome: q.nome, descricao: q.descricao, analisado_em: q.analisado_em,
+    posts: (await Promise.all((q.media_ids ?? []).filter((id: string) => /^\d+$/.test(id)).slice(0, 15).map(async (id: string) => {
+      const m = await igGet(`/${id}?fields=caption,timestamp,media_product_type,like_count,comments_count,permalink`);
+      if (!m.ok) return null;
+      const ins = await igGet(`/${id}/insights?metric=reach,saved,views,shares`);
+      const met: Record<string, number> = {};
+      // deno-lint-ignore no-explicit-any
+      for (const x of ins.ok ? ins.data?.data ?? [] : []) met[x.name] = (x as any).values?.[0]?.value ?? 0;
+      const com = await igGet(`/${id}/comments?fields=text,username&limit=50`);
+      return {
+        data: corta(m.data.timestamp, 10), tipo: m.data.media_product_type, legenda: corta(m.data.caption, 300), link: m.data.permalink,
+        curtidas: m.data.like_count ?? 0, comentarios: m.data.comments_count ?? 0, ...met,
+        // deno-lint-ignore no-explicit-any
+        textos_dos_comentarios: (com.ok ? com.data?.data ?? [] : []).map((c: any) => corta(c.text, 200)),
+      };
+    }))).filter(Boolean),
+  })));
+}
+
 async function lerConfig(chave: string) {
   const { data } = await db.from("painel_config").select("valor").eq("chave", chave).maybeSingle();
   return data?.valor ?? null;
@@ -36,8 +59,9 @@ Deno.serve(async (req) => {
 
   try {
     if (req.method === "GET") {
-      const [tudo, d30, d90, analise, estrategia] = await Promise.all([
+      const [tudo, d30, d90, analise, estrategia, feitos, quadros] = await Promise.all([
         analytics("tudo"), analytics("30"), analytics("90"), lerConfig("analise_ig"), lerConfig("estrategia"),
+        lerConfig("estrategia_feitos"), quadrosComPosts(),
       ]);
       return json({
         hoje: new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10),
@@ -53,6 +77,9 @@ Deno.serve(async (req) => {
         quem_mais_comenta: tudo?.comentaristas ?? [],
         analise_atual: analise,
         estrategia_atual: estrategia,
+        // Conteúdos da estratégia que ela marcou como feitos: { "AAAA-MM-DD|tema": true }
+        conteudos_feitos: feitos ?? {},
+        quadros,
       });
     }
 
@@ -88,6 +115,16 @@ Deno.serve(async (req) => {
       }
       await gravarConfig("estrategia", { ...e, gerado_em: agora });
       return json({ ok: true, dias: e.calendario.length });
+    }
+
+    if (body.tipo === "quadro") {
+      const a = body.analise;
+      if (!body.id || !a?.resumo || !["bom", "medio", "fraco", "sem_dados"].includes(a.veredito)) {
+        return json({ erro: "análise de quadro incompleta (id, veredito, resumo)" }, 400);
+      }
+      const { error } = await db.from("quadros").update({ analise: a, analisado_em: agora }).eq("id", String(body.id));
+      if (error) throw new Error(error.message);
+      return json({ ok: true });
     }
 
     return json({ erro: "tipo desconhecido" }, 400);

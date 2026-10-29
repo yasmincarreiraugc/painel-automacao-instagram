@@ -22,7 +22,7 @@ async function chamaIA(modo, corpo = {}) {
 function avisoIA(r) {
   if (r.codigo === "sem_chave" || r.codigo === "chave_invalida") {
     return `<div class="card aviso-ia">${icon("spark")}<div><h2>Atualização pelo chat</h2>
-      <p>Esse botão usa a chave paga do Claude, que ainda não foi ligada. Sem problema: esta página se atualiza sozinha todo dia à meia-noite,
+      <p>Esse botão usa a chave paga do Claude, que ainda não foi ligada. Sem problema: esta página se atualiza sozinha toda segunda à meia-noite,
       e quando quiser na hora é só pedir no chat do Claude Code (ex: <em>"atualiza minha análise"</em>).</p></div></div>`;
   }
   return `<div class="soft-box">${esc(r.erro || "Algo deu errado.")}</div>`;
@@ -37,6 +37,11 @@ async function lerCfg(chave) {
   const { data } = await sb.from("painel_config").select("valor").eq("chave", chave).maybeSingle();
   return data?.valor ?? null;
 }
+async function gravarCfg(chave, valor) {
+  if (!sb) { store.set(`cfg_${chave}`, JSON.stringify(valor)); return; }
+  const { error } = await sb.from("painel_config").upsert({ chave, valor, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
 
 // Posts com métricas (mesma função da aba Análises; fica em cache 30 min).
 async function postsComMetricas() {
@@ -44,14 +49,6 @@ async function postsComMetricas() {
     api.funcao("ig-analytics", { periodo: "tudo" }), api.funcao("ig-analytics", { periodo: "30" }), api.funcao("ig-analytics", { periodo: "90" }),
   ]);
   return { tudo, d30, d90 };
-}
-
-// Cria um roteiro (etapa Ideia) a partir de uma ideia da IA.
-async function viraRoteiro(titulo, gancho, texto = "") {
-  try {
-    await tabela("roteiros", "updated_at").salvar({ titulo: String(titulo).slice(0, 120), gancho: String(gancho || "").slice(0, 500), texto, status: "ideia", formato: "reels" });
-    toast("Virou roteiro! Está em Roteiros > Ideia.", "ok");
-  } catch (e) { console.warn(e); toast("Não consegui criar o roteiro.", "err"); }
 }
 
 // ---------------------------------------------------------------------
@@ -128,7 +125,6 @@ window.Quadros = (() => {
   const db = tabela("quadros", "created_at");
   let lista = [];
   let posts = null; // posts do Instagram (com métricas)
-  let analisando = new Set();
 
   async function abrir() {
     const box = $("#quadros-conteudo");
@@ -182,8 +178,8 @@ window.Quadros = (() => {
         </div>
         <div class="quadro-acoes">
           <button class="btn sm" data-q-videos>${icon("check")} Marcar vídeos</button>
-          <button class="btn sm primary" data-q-analisar ${analisando.has(q.id) ? "disabled" : ""}>${icon("spark")} ${analisando.has(q.id) ? "Analisando..." : a ? "Analisar de novo" : "Analisar"}</button>
           <button class="icon-btn" data-q-editar title="Editar quadro" aria-label="Editar ${esc(q.nome)}">${icon("edit")}</button>
+          <span class="nota-auto">${icon("refresh")} ${a ? `Analisado em ${dataBR(q.analisado_em)}. ` : ""}Nova análise toda segunda, com os vídeos marcados.</span>
         </div>
         ${a ? analiseHtml(q) : ""}
       </article>`;
@@ -193,11 +189,6 @@ window.Quadros = (() => {
       const q = lista.find((x) => x.id === el.dataset.q);
       $("[data-q-videos]", el).addEventListener("click", () => marcarVideos(q));
       $("[data-q-editar]", el).addEventListener("click", () => editar(q));
-      $("[data-q-analisar]", el).addEventListener("click", () => analisar(q));
-      $$("[data-q-roteiro]", el).forEach((b) => b.addEventListener("click", () => {
-        const i = q.analise.ideias[Number(b.dataset.qRoteiro)];
-        viraRoteiro(`${q.nome}: ${i.titulo}`, i.gancho);
-      }));
     });
   }
 
@@ -212,24 +203,8 @@ window.Quadros = (() => {
         </div>
         ${(a.pedidos_do_publico || []).length ? `<h3>O que as pessoas estão pedindo</h3><div class="chips-ia">${a.pedidos_do_publico.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>` : ""}
         <h3>Ideias pros próximos episódios</h3>
-        <ul class="ideias">${(a.ideias || []).map((i, n) => `<li><div><b>${esc(i.titulo)}</b><small>"${esc(i.gancho)}"</small></div><button class="btn sm" data-q-roteiro="${n}">Virar roteiro</button></li>`).join("")}</ul>
+        <ul class="ideias">${(a.ideias || []).map((i) => `<li><div><b>${esc(i.titulo)}</b><small>"${esc(i.gancho)}"</small></div></li>`).join("")}</ul>
       </div>`;
-  }
-
-  async function analisar(q) {
-    analisando.add(q.id); render();
-    toast(`Analisando "${q.nome}". Leva cerca de 1 minuto.`);
-    const r = await chamaIA("quadro", { quadro_id: q.id, media_geral: mediaGeral() });
-    analisando.delete(q.id);
-    if (!r.ok) {
-      render();
-      const el = $(`[data-q="${q.id}"]`);
-      el?.insertAdjacentHTML("beforeend", avisoIA(r));
-      return;
-    }
-    q.analise = r.resultado; q.analisado_em = new Date().toISOString();
-    toast("Análise do quadro pronta!", "ok");
-    render();
   }
 
   function editar(q) {
@@ -345,10 +320,9 @@ window.EmAlta = (() => {
             <span class="alta-tema"><i style="background:${corDe(i.tema)}"></i>${esc(nomeDe(i.tema))}</span></div>
           <h3>${esc(i.titulo)}</h3>
           <p>${esc(i.descricao)}</p>
-          ${i.ideia ? `<div class="alta-ideia"><b>Vira roteiro assim:</b> ${esc(i.ideia)}</div>` : ""}
+          ${i.ideia ? `<div class="alta-ideia"><b>Como usar no seu conteúdo:</b> ${esc(i.ideia)}</div>` : ""}
           <div class="alta-rodape">
             ${/^https?:\/\//.test(i.fonte) ? `<a href="${esc(i.fonte)}" target="_blank" rel="noopener">fonte</a>` : `<small class="muted">${esc(i.fonte)}</small>`}
-            <button class="btn sm" data-virar="${i.id}">Virar roteiro</button>
           </div>
         </article>`).join("")}</div>`
         : `<div class="card empty"><div class="ico">${icon("flame")}</div><h2>${itens.length ? "Nada nesse filtro" : "Nenhuma pesquisa ainda"}</h2>
@@ -357,10 +331,6 @@ window.EmAlta = (() => {
     $$("[data-tema]", box).forEach((b) => b.addEventListener("click", () => { tema = b.dataset.tema; render(); }));
     $$("[data-tipo]", box).forEach((b) => b.addEventListener("click", () => { tipo = b.dataset.tipo; render(); }));
     $("[data-buscar]", box).addEventListener("click", buscar);
-    $$("[data-virar]", box).forEach((b) => b.addEventListener("click", () => {
-      const i = itens.find((x) => String(x.id) === b.dataset.virar);
-      viraRoteiro(i.titulo, i.ideia, `${i.descricao}${i.fonte ? `\n\nFonte: ${i.fonte}` : ""}`);
-    }));
   }
 
   async function buscar() {
@@ -393,9 +363,11 @@ window.Estrategia = (() => {
   let chat = [];
   let montando = "";
   let enviando = false;
+  let feitos = {};
 
   async function abrir() {
     est = await lerCfg("estrategia");
+    feitos = (await lerCfg("estrategia_feitos")) || {};
     if (sb) {
       const { data } = await sb.from("estrategia_chat").select("*").order("id", { ascending: true }).limit(60);
       chat = data || [];
@@ -418,8 +390,7 @@ window.Estrategia = (() => {
               <textarea class="input" id="estr-pedido" rows="4" maxlength="2000" placeholder="Ex: quero chegar em 2.000 seguidores até dezembro, consigo gravar 4 reels por semana, quero focar em UGC e rotina de mãe."></textarea>
               <button class="btn primary" id="estr-montar" ${montando ? "disabled" : ""}>${icon("spark")} Montar estratégia e calendário de 30 dias</button>
             </div>` : `
-            <div class="card objetivo"><span class="sobretitulo">Objetivo</span><p>${esc(est.objetivo)}</p>
-              <button class="btn sm" id="estr-refazer" ${montando ? "disabled" : ""}>${icon("refresh")} Refazer tudo</button></div>
+            <div class="card objetivo"><span class="sobretitulo">Objetivo</span><p>${esc(est.objetivo)}</p></div>
             <h2 class="secao">Pilares de conteúdo</h2>
             <div class="pilares">${est.pilares.map((p, i) => `
               <div class="pilar" style="--c:${CORES_PILAR[i % CORES_PILAR.length]}">
@@ -432,10 +403,10 @@ window.Estrategia = (() => {
             ${(est.estilo || []).length ? `
               <h2 class="secao">O jeito de gravar</h2>
               <div class="estilo">${est.estilo.map((e) => `<div><b>${esc(e.regra)}</b><p>${esc(e.como)}</p></div>`).join("")}</div>` : ""}
-            <div class="secao-linha"><h2 class="secao">Calendário de 30 dias</h2>
-              ${(est.calendario || []).length < 30 && !montando ? `<button class="btn sm primary" id="estr-completar">${icon("spark")} Completar calendário</button>` : ""}</div>
+            <div class="secao-linha"><h2 class="secao">Calendário de conteúdo</h2>
+              <span class="nota-auto">${icon("refresh")} Atualizado toda segunda com base no que você postou</span></div>
             ${semanasHtml(est.calendario || [], (d) => `
-              <article class="dia30" data-dia="${d.dia}">
+              <article class="dia30 ${feitos[chaveDia(d)] ? "feito" : ""}" data-dia="${d.dia}">
                 <div class="dia30-topo"><span class="dia30-n"><b>${d.dia}</b>${d.data ? `${esc(semana(d.data))} ${esc(d.data.slice(8, 10))}/${esc(d.data.slice(5, 7))}` : ""}</span>
                   <span class="fmt ${CORES_FORMATO[d.formato] || ""}">${esc(d.formato)}</span></div>
                 <span class="dia30-pilar"><i style="background:${corPilar(d.pilar)}"></i>${esc(d.pilar)}</span>
@@ -447,8 +418,8 @@ window.Estrategia = (() => {
                   ${d.legenda_cta ? `<p><b>Legenda/CTA:</b> ${esc(d.legenda_cta)}</p>` : ""}
                 </details>
                 <div class="dia30-acoes">
-                  <button class="btn sm" data-agenda="${d.dia}" title="Coloca na sua agenda nesse dia">${icon("calendar")} Agenda</button>
-                  <button class="btn sm" data-rot="${d.dia}">${icon("file")} Roteiro</button>
+                  <button class="btn sm feito-btn ${feitos[chaveDia(d)] ? "on" : ""}" data-feito="${d.dia}" aria-pressed="${!!feitos[chaveDia(d)]}">
+                    ${icon("check")} ${feitos[chaveDia(d)] ? "Conteúdo feito" : "Marcar como feito"}</button>
                 </div>
               </article>`)}`}
         </div>
@@ -468,25 +439,20 @@ window.Estrategia = (() => {
     const msgs = $("#chat-msgs");
     msgs.scrollTop = msgs.scrollHeight;
     $("#estr-montar")?.addEventListener("click", () => montar($("#estr-pedido").value.trim()));
-    $("#estr-refazer")?.addEventListener("click", () => {
-      const pedido = prompt("O que você quer nessa nova estratégia?", est?.pedido || "");
-      if (pedido !== null) montar(pedido.trim());
-    });
-    $("#estr-completar")?.addEventListener("click", completar);
     $("#chat-form").addEventListener("submit", (ev) => { ev.preventDefault(); enviar(); });
     $("#chat-texto").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); enviar(); } });
-    $$("[data-agenda]", box).forEach((b) => b.addEventListener("click", async () => {
-      const d = est.calendario.find((x) => String(x.dia) === b.dataset.agenda);
-      try {
-        await window.Agenda.salvar({ dia: d.data, hora: null, titulo: `${d.formato[0].toUpperCase() + d.formato.slice(1)}: ${d.tema}`.slice(0, 160), categoria: "postagem", notas: `${d.ideia}\nGancho: ${d.gancho}`.slice(0, 1000), concluida: false });
-        toast(`Colocado na agenda dia ${d.data.slice(8, 10)}/${d.data.slice(5, 7)}.`, "ok");
-      } catch (e) { console.warn(e); toast("Não consegui colocar na agenda.", "err"); }
-    }));
-    $$("[data-rot]", box).forEach((b) => b.addEventListener("click", () => {
-      const d = est.calendario.find((x) => String(x.dia) === b.dataset.rot);
-      viraRoteiro(d.tema, d.gancho, `${d.ideia}\n\nStories:\n${(d.stories || []).map((s) => "- " + s).join("\n")}\n\nLegenda/CTA: ${d.legenda_cta || ""}`);
+    $$("[data-feito]", box).forEach((b) => b.addEventListener("click", async () => {
+      const d = est.calendario.find((x) => String(x.dia) === b.dataset.feito);
+      const k = chaveDia(d);
+      if (feitos[k]) delete feitos[k]; else feitos[k] = true;
+      render();
+      try { await gravarCfg("estrategia_feitos", feitos); if (feitos[k]) toast("Conteúdo marcado como feito!", "ok"); }
+      catch (e) { console.warn(e); toast("Não consegui salvar.", "err"); }
     }));
   }
+
+  // "Feito" fica guardado à parte (a rotina de segunda reescreve o calendário).
+  const chaveDia = (d) => `${d.data}|${d.tema}`;
 
   // Calendário agrupado por semana (usa "semana" do dia ou calcula de 7 em 7),
   // com o título, o foco e a meta de cada semana quando existirem.
@@ -506,7 +472,7 @@ window.Estrategia = (() => {
           <header class="semana-topo">
             <span class="semana-n">Semana ${n}</span>
             <div><h3>${esc(info?.titulo || "")}</h3>${info?.foco ? `<p>${esc(info.foco)}</p>` : ""}</div>
-            <div class="semana-lado"><small>${esc(periodo)}</small>${info?.meta ? `<span>${esc(info.meta)}</span>` : ""}</div>
+            <div class="semana-lado"><small>${esc(periodo)}</small><b class="semana-feitos">${ds.filter((d) => feitos[chaveDia(d)]).length} de ${ds.length} feitos</b>${info?.meta ? `<span>${esc(info.meta)}</span>` : ""}</div>
           </header>
           <div class="calendario30">${ds.map(cartao).join("")}</div>
         </section>`;
@@ -551,7 +517,13 @@ window.Estrategia = (() => {
     render();
     const r = await chamaIA("estrategia_chat", { mensagem: t });
     enviando = false;
-    if (!r.ok) { chat.push({ papel: "claude", texto: r.erro || "Não consegui responder agora." }); render(); return; }
+    if (!r.ok) {
+      const semChave = r.codigo === "sem_chave" || r.codigo === "chave_invalida";
+      chat.push({ papel: "claude", texto: semChave
+        ? "Esse chat do painel usa a chave paga do Claude, que não está ligada. Me peça a mesma coisa no chat do Claude Code que eu ajusto a estratégia aqui pra você."
+        : r.erro || "Não consegui responder agora." });
+      render(); return;
+    }
     chat.push({ papel: "claude", texto: r.resultado.resposta });
     if (r.resultado.mudou) { est = r.resultado.estrategia; toast("Estratégia atualizada.", "ok"); }
     render();

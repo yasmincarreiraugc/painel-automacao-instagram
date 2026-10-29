@@ -10,6 +10,8 @@
 // ---------------------------------------------------------------------
 window.Agenda = (() => {
   const CATEGORIAS = [
+    { id: "entrega", nome: "Entrega pra marca", cor: "#E11D48" },
+    { id: "compromisso", nome: "Compromisso", cor: "#0EA5E9" },
     { id: "gravacao", nome: "Gravação", cor: "#DB2777" },
     { id: "edicao", nome: "Edição", cor: "#7C3AED" },
     { id: "postagem", nome: "Postagem", cor: "#2563EB" },

@@ -113,7 +113,7 @@
         <div>
           <p class="sobretitulo">Do gancho ao CTA</p>
           <h1 class="titulo-grande">Seus <mark>roteiros</mark></h1>
-          <p class="sub">Ideias, roteiros em andamento e o que já foi gravado.</p>
+          <p class="sub">Os roteiros dos seus trabalhos pras marcas, da ideia até o post.</p>
         </div>
         <button class="btn primary" id="roteiro-novo"><span data-icon="plus"></span> Novo roteiro</button>
       </div>
@@ -140,7 +140,7 @@
         <div>
           <p class="sobretitulo">Sua especialista em Instagram</p>
           <h1 class="titulo-grande">O que está <mark>funcionando</mark></h1>
-          <p class="sub">O Claude olha seus posts e números e diz o que repetir e o que ajustar. Atualiza sozinho todo dia à meia-noite.</p>
+          <p class="sub">O Claude olha seus posts e números e diz o que repetir e o que ajustar. Atualiza sozinho toda segunda à meia-noite.</p>
         </div>
         <button class="btn primary" id="analista-gerar"><span data-icon="spark"></span> Gerar nova análise</button>
       </div>
@@ -166,7 +166,7 @@
         <div>
           <p class="sobretitulo">Pesquisa do Claude</p>
           <h1 class="titulo-grande">O que tá <mark>em alta</mark></h1>
-          <p class="sub">Trends, pautas e achados do momento, separados por tema, prontos pra virar roteiro. Nova pesquisa todo dia à meia-noite.</p>
+          <p class="sub">Trends, pautas e achados do momento, separados por tema, prontos pra virar roteiro. Nova pesquisa toda segunda à meia-noite.</p>
         </div>
         <div id="emalta-info"></div>
       </div>
@@ -179,12 +179,22 @@
         <div>
           <p class="sobretitulo">Plano de 30 dias</p>
           <h1 class="titulo-grande">Sua <mark class="amarelo">estratégia</mark></h1>
-          <p class="sub">Pilares de conteúdo, o plano pra chegar lá e o que postar em cada semana. Se ajusta todo dia com base no que você postou.</p>
+          <p class="sub">Pilares de conteúdo, o plano pra chegar lá e o que postar em cada semana. Se ajusta toda segunda com base no que você postou.</p>
         </div>
       </div>
       <div id="estrategia-conteudo"></div>
     </section>
-    <section data-section="criarposts" hidden data-embreve="Criar posts|Monte posts e carrosséis com a sua identidade visual, prontos pra publicar."></section>
+    <!-- Estagiário: editor de carrossel -->
+    <section data-section="criarposts" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Estagiário</p>
+          <h1 class="titulo-grande">Criar <mark>carrossel</mark></h1>
+          <p class="sub">Monte slides com a sua identidade, salve e baixe as imagens prontas pra postar.</p>
+        </div>
+      </div>
+      <div id="carrossel-conteudo"></div>
+    </section>
     <section data-section="criarvideos" hidden data-embreve="Criar vídeos|Organize as cenas, o texto e as legendas dos seus vídeos antes de gravar."></section>
     <section data-section="site" hidden data-embreve="Site|O seu site yasmincarreira.com: mensagens recebidas e o que atualizar."></section>
 
@@ -194,7 +204,7 @@
         <div>
           <p class="sobretitulo">Dia a dia</p>
           <h1 class="titulo-grande">Sua <mark class="azul">agenda</mark></h1>
-          <p class="sub">Suas tarefas do dia, com o mês inteiro à vista.</p>
+          <p class="sub">Entregas pras marcas, compromissos e tarefas do dia, com o mês inteiro à vista.</p>
         </div>
         <button class="btn primary" id="tarefa-nova"><span data-icon="plus"></span> Nova tarefa</button>
       </div>
@@ -330,5 +340,6 @@
 <script src="negocio.js"></script>
 <script src="inicio.js"></script>
 <script src="ia.js"></script>
+<script src="carrossel.js"></script>
 </body>
 </html>

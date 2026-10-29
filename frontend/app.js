@@ -257,6 +257,7 @@ function irPara(pagina) {
   if (pagina === "quadros") window.Quadros?.abrir();
   if (pagina === "emalta") window.EmAlta?.abrir();
   if (pagina === "estrategia") window.Estrategia?.abrir();
+  if (pagina === "criarposts") window.Carrossel?.abrir();
   if (pagina === "instagram") abrirAba(store.get("aba_ig") || "analises");
   const sec = $(`[data-section="${pagina}"]`);
   if (sec?.dataset.embreve && !sec.innerHTML.trim()) emBreve(sec);

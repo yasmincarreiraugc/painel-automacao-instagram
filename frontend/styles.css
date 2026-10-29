@@ -988,3 +988,103 @@ label.seg { display: inline-flex; align-items: center; cursor: pointer; }
   .semana-topo { grid-template-columns: 1fr; }
   .semana-lado { text-align: left; max-width: none; }
 }
+
+/* Feito na estratégia e avisos de atualização automática */
+.nota-auto { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.nota-auto svg { width: 14px; height: 14px; }
+.feito-btn.on { background: #dff3dc; color: #1f6b2c; box-shadow: none; }
+.dia30.feito { opacity: .6; }
+.dia30.feito h3 { text-decoration: line-through; }
+.semana-feitos { color: #fff; font-size: 11.5px; }
+
+/* ---------- Editor de carrossel ---------- */
+.cs-barra { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.cs-barra select { max-width: 230px; }
+.cs-barra #cs-nome { flex: 1; min-width: 180px; }
+.cs-editor { display: grid; grid-template-columns: 124px minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.cs-trilha { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 220px); overflow-y: auto; padding: 2px; }
+.cs-mini { position: relative; width: 108px; height: 135px; border-radius: 10px; overflow: hidden; cursor: pointer; box-shadow: var(--shadow); outline: 3px solid transparent; flex: none; }
+.cs-mini.on { outline-color: var(--rosa); }
+.cs-mini:focus-visible { outline-color: var(--text); }
+.cs-mini-escala { transform: scale(0.1); transform-origin: top left; width: 1080px; height: 1350px; pointer-events: none; }
+.cs-mini > span { position: absolute; left: 4px; bottom: 4px; background: rgba(255,255,255,.9); font-size: 10px; font-weight: 700; border-radius: 99px; padding: 0 6px; }
+.cs-add { display: flex; flex-direction: column; gap: 6px; width: 108px; }
+.cs-add select { font-size: 11px; padding: 5px 6px; }
+.cs-palco { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cs-previa { width: 432px; height: 540px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-lg); flex: none; }
+.cs-previa-escala { transform: scale(0.4); transform-origin: top left; width: 1080px; height: 1350px; }
+.cs-acoes-slide { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--muted); }
+.cs-props { display: flex; flex-direction: column; gap: 2px; max-height: calc(100vh - 220px); overflow-y: auto; }
+.cs-props .label { margin: 10px 0 4px; }
+.cs-props .label:first-child { margin-top: 0; }
+.cs-cores { display: flex; gap: 6px; flex-wrap: wrap; }
+.cs-cor { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-strong); cursor: pointer; }
+.cs-cor.on { outline: 3px solid var(--text); outline-offset: 2px; }
+.cs-foto-campo { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cs-foto-campo img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; }
+.cs-foto-campo label.btn { cursor: pointer; }
+.cs-exportar { position: fixed; left: -20000px; top: 0; width: 1080px; height: 1350px; }
+
+/* Slide em tamanho real (1080 x 1350) */
+.cs-slide { position: relative; width: 1080px; height: 1350px; box-sizing: border-box; padding: 110px 96px 140px; font-family: "Montserrat", sans-serif;
+  color: #1e1915; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 44px; background: #fff; }
+.cs-slide.f-bege { background: #f5f2ed; } .cs-slide.f-branco { background: #ffffff; } .cs-slide.f-rosa { background: #ffd9f0; }
+.cs-slide.f-manteiga { background: #fff2c2; } .cs-slide.f-azul { background: #d9eafd; } .cs-slide.f-preto { background: #1e1915; color: #fff; }
+.cs-slide h1, .cs-slide h2, .cs-slide h3 { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; margin: 0; letter-spacing: -.005em; }
+.cs-slide h1 { font-size: 150px; line-height: .95; }
+.cs-slide h2 { font-size: 112px; line-height: 1; }
+.cs-slide mark { background: var(--dest); color: #1e1915; padding: 0 .12em; border-radius: 18px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.cs-slide p { margin: 0; }
+.cs-par { font-size: 46px; line-height: 1.45; font-weight: 500; }
+.cs-par.menor { font-size: 38px; }
+.cs-nota { font-family: "Caveat", cursive; font-size: 66px; font-weight: 700; color: #57514c; }
+.f-preto .cs-nota { color: #e9e1d7; }
+.cs-estrela { width: 120px; height: 120px; fill: var(--dest); stroke: #1e1915; stroke-width: 2.4; stroke-linejoin: round; overflow: visible; }
+.f-preto .cs-estrela { stroke: #fff; }
+.l-capa .cs-capa-txt { display: flex; flex-direction: column; gap: 40px; position: relative; }
+.l-capa .cs-capa-txt p { font-size: 44px; font-weight: 500; line-height: 1.4; }
+.l-capa:has(.capa-foto) { justify-content: flex-end; }
+.l-capa:has(.capa-foto) h1 { font-size: 118px; }
+.l-capa:has(.capa-foto) .cs-estrela { position: absolute; top: -110px; right: 0; width: 140px; height: 140px; }
+.cs-foto { background-size: cover; background-position: center; border-radius: 36px; }
+.cs-foto.vazia { background: repeating-linear-gradient(45deg, rgba(30,25,21,.06) 0 20px, transparent 20px 40px); border: 4px dashed rgba(30,25,21,.25);
+  display: flex; align-items: center; justify-content: center; font-size: 44px; color: rgba(30,25,21,.4); }
+.capa-foto { position: absolute; top: 0; left: 0; right: 0; height: 56%; border-radius: 0 0 60px 60px; }
+.l-foto { padding: 0; }
+.cs-foto.cheia { position: absolute; inset: 0; border-radius: 0; }
+.cs-legenda { position: absolute; left: 70px; right: 70px; bottom: 140px; background: #fff; color: #1e1915; border-radius: 40px; padding: 44px 50px; display: flex; flex-direction: column; gap: 14px; }
+.cs-legenda h3 { font-size: 76px; line-height: 1; }
+.cs-legenda p { font-size: 36px; line-height: 1.4; font-weight: 500; }
+.cs-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 26px; }
+.cs-lista li { display: flex; align-items: center; gap: 34px; background: rgba(255,255,255,.75); border-radius: 36px; padding: 32px 40px; }
+.f-branco .cs-lista li { background: #f5f2ed; }
+.f-preto .cs-lista li { background: #2b2520; }
+.cs-lista b { flex: none; width: 92px; height: 92px; border-radius: 50%; background: var(--dest); color: #1e1915; display: flex; align-items: center; justify-content: center;
+  font-family: "Barlow Condensed", sans-serif; font-size: 58px; }
+.cs-lista span { font-size: 42px; font-weight: 600; line-height: 1.3; }
+.cs-ad { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+.cs-ad > div { position: relative; }
+.cs-ad .cs-foto { height: 760px; }
+.cs-ad span { position: absolute; top: 26px; left: 26px; background: #1e1915; color: #fff; font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 44px; padding: 6px 26px; border-radius: 99px; }
+.cs-ad > div:last-child span { background: var(--dest); color: #1e1915; }
+.cs-aspas { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 340px; line-height: .55; color: var(--dest); height: 150px; }
+.cs-frase { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 104px; line-height: 1.05; text-transform: uppercase; }
+.cs-nota.assinatura { align-self: flex-end; }
+.l-final { align-items: center; text-align: center; }
+.cs-cta { background: var(--dest); color: #1e1915; border-radius: 99px; padding: 32px 64px; font-size: 46px; font-weight: 700; }
+.cs-handle { font-size: 50px; font-weight: 600; }
+.cs-rodape { position: absolute; left: 96px; right: 96px; bottom: 56px; display: flex; justify-content: space-between; font-size: 30px; font-weight: 600; opacity: .65; }
+.l-foto .cs-rodape { color: #fff; opacity: .9; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+
+@media (max-width: 1100px) {
+  .cs-editor { grid-template-columns: 124px minmax(0, 1fr); }
+  .cs-props { grid-column: 1 / -1; max-height: none; }
+}
+@media (max-width: 760px) {
+  .cs-editor { grid-template-columns: 1fr; }
+  .cs-trilha { flex-direction: row; max-height: none; overflow-x: auto; padding-bottom: 6px; }
+  .cs-add { flex: none; }
+  .cs-previa { width: 324px; height: 405px; }
+  .cs-previa-escala { transform: scale(0.3); }
+}
+.cs-props textarea.input { height: auto; min-height: 96px; resize: vertical; }

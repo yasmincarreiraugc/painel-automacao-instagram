@@ -52,6 +52,7 @@ são pra colocar no ar de verdade, com login e dados salvos.
    - `08_agenda_e_site.sql`: a agenda (tabela `tarefas`) e as métricas do site do portfólio (`site_eventos` e `site_resumo`).
    - `09_roteiros_campanhas.sql`: campanhas, roteiros e ajustes do painel (meta de seguidores).
    - `10_permuta_ia.sql`: permuta e nicho nas campanhas, quadros, em alta e a conversa da estratégia.
+   - `11_carrosseis.sql`: os carrosséis do editor (Estagiário > Criar posts).
    - (o `04_agendamento.sql` fica pro Passo 5)
 
 > **ATENÇÃO:** o `02_freio.sql` é obrigatório. Sem as funções do freio, ele falha

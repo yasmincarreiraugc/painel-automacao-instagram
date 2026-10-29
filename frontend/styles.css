@@ -59,6 +59,7 @@ h3 { font-size: 14px; margin: 0; font-weight: 600; }
   font-weight: 550; cursor: pointer; white-space: nowrap;
   transition: background .15s, border-color .15s;
 }
+a.btn { text-decoration: none; color: var(--text); }
 .btn:hover { background: var(--bg); border-color: var(--border-strong); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.primary:hover { background: var(--accent-hover); }
@@ -312,6 +313,97 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: .92em; backgro
 .an-mini span { font-size: 12px; color: var(--muted); }
 .an-rodape { display: flex; align-items: center; gap: 6px; margin-top: 16px; }
 .an-rodape svg { width: 14px; height: 14px; }
+
+/* ---------- Agenda ---------- */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.agenda { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr); gap: 16px; align-items: start; }
+.cal-card { padding: 16px; }
+.cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.cal-head h2 { flex: 1; text-align: center; margin: 0; text-transform: capitalize; font-size: 17px; }
+.cal-semana, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-semana span { text-align: center; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-bottom: 4px; }
+.cal-dia {
+  position: relative; min-height: 86px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  padding: 5px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 3px; overflow: hidden; color: var(--text);
+}
+.cal-dia:hover { border-color: var(--border-strong); background: #FBFCFD; }
+.cal-dia:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cal-dia.fora { background: var(--bg); color: var(--muted); }
+.cal-dia .n { font-size: 12px; font-weight: 600; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+.cal-dia.hoje .n { background: var(--accent); color: #fff; }
+.cal-dia.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.cal-itens { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cal-item {
+  font-size: 10.5px; line-height: 1.3; padding: 1px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: color-mix(in srgb, var(--c) 14%, transparent); color: color-mix(in srgb, var(--c) 80%, #000); border-left: 3px solid var(--c);
+}
+.cal-item.ok { text-decoration: line-through; opacity: .55; }
+.cal-mais { font-size: 10px; color: var(--muted); padding-left: 4px; }
+.cal-pontos { display: none; gap: 2px; flex-wrap: wrap; }
+.cal-pontos i { width: 6px; height: 6px; border-radius: 50%; }
+.cal-legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.cal-legenda span { display: inline-flex; align-items: center; gap: 5px; }
+.cal-legenda i { width: 9px; height: 9px; border-radius: 3px; }
+
+.dia-card { padding: 0; overflow: hidden; position: sticky; top: 16px; }
+.dia-head { padding: 16px 16px 8px; }
+.dia-head h2 { font-size: 17px; }
+.progresso { height: 4px; background: var(--bg); margin: 0 16px 12px; border-radius: 99px; overflow: hidden; }
+.progresso i { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 99px; transition: width .25s; }
+.tarefa-rapida { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 6px; padding: 0 16px 12px; }
+.tarefa-rapida #tr-titulo { grid-column: 1 / -1; order: -1; }
+.tarefas-table td { white-space: normal; }
+.tarefas-table td.hora { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.tarefas-table td.tit .btn.link { color: var(--text); font-weight: 550; text-align: left; }
+.tarefas-table td.tit small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.tarefas-table td.tit .cat { margin-top: 5px; }
+.tarefas-table td.tit .btn.link { display: block; }
+.tarefas-table tr.feita td.tit .btn.link { text-decoration: line-through; color: var(--muted); }
+.tarefas-table td.acoes { white-space: nowrap; text-align: right; }
+.cat {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 550; padding: 2px 8px; border-radius: 99px;
+  background: color-mix(in srgb, var(--c) 12%, transparent); color: color-mix(in srgb, var(--c) 80%, #000); white-space: nowrap;
+}
+.cat::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.check { display: inline-flex; cursor: pointer; }
+.check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.check span {
+  width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border-strong); display: inline-flex;
+  align-items: center; justify-content: center; color: transparent; transition: all .15s;
+}
+.check span svg { width: 14px; height: 14px; }
+.check input:checked + span { background: var(--ok); border-color: var(--ok); color: #fff; }
+.check input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.dialogo { border: 0; border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 24px; width: min(520px, calc(100vw - 32px)); color: var(--text); }
+.dialogo::backdrop { background: rgba(16,24,40,.45); }
+.dialogo h2 { margin-bottom: 14px; }
+.dialogo .label { display: block; margin: 10px 0 4px; }
+.dialogo .input { width: 100%; }
+.dialogo textarea.input { height: auto; padding: 8px 10px; resize: vertical; }
+.dialogo-linha { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 8px; }
+.dialogo-acoes { display: flex; gap: 8px; margin-top: 20px; align-items: center; }
+
+/* ---------- Portfólio ---------- */
+.an-rank .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
+.an-post .met strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.previa-site { display: flex; justify-content: center; background: var(--bg); border-radius: var(--radius-sm); padding: 16px; }
+.previa-site iframe { border: 1px solid var(--border); border-radius: 12px; background: #fff; height: 640px; width: 100%; transition: width .2s; }
+.previa-site.celular iframe { width: 390px; max-width: 100%; border-radius: 28px; border: 8px solid #111; }
+
+@media (max-width: 1100px) {
+  .agenda { grid-template-columns: 1fr; }
+  .dia-card { position: static; }
+}
+@media (max-width: 600px) {
+  .cal-dia { min-height: 52px; align-items: center; }
+  .cal-itens { display: none; }
+  .cal-pontos { display: flex; justify-content: center; }
+  .tarefa-rapida { grid-template-columns: 100px minmax(0, 1fr); }
+  .tarefa-rapida button { grid-column: 1 / -1; }
+  .dialogo-linha { grid-template-columns: 1fr 1fr; }
+  .dialogo-linha > div:last-child { grid-column: 1 / -1; }
+}
 
 /* ---------- Toast ---------- */
 #toast {

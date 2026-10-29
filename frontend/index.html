@@ -54,6 +54,7 @@
       <button data-page="inicio"><span data-icon="home"></span> Início</button>
       <button data-page="calendario"><span data-icon="calendar"></span> Calendário</button>
       <button data-page="instagram"><span data-icon="instagram"></span> Instagram</button>
+      <button data-page="portfolio"><span data-icon="briefcase"></span> Portfólio</button>
     </nav>
     <div class="side-foot">
       <div class="who" id="who"></div>
@@ -79,6 +80,7 @@
         <div class="card stat"><span class="label">Leads captados</span><div class="num" id="st-leads">0</div><div class="foot">pessoas que interagiram</div></div>
         <div class="card stat"><span class="label">Automações ativas</span><div class="num" id="st-autos">0</div><div class="foot">respondendo agora</div></div>
         <div class="card stat"><span class="label">DMs enviadas</span><div class="num" id="st-dms">0</div><div class="foot">últimos 7 dias</div></div>
+        <div class="card stat"><span class="label">Tarefas de hoje</span><div class="num" id="st-tarefas">0</div><div class="foot" id="st-tarefas-foot">nada marcado pra hoje</div></div>
       </div>
       <div class="shortcuts">
         <button class="btn primary" data-go="instagram"><span data-icon="instagram"></span> Ir pro Instagram</button>
@@ -86,14 +88,78 @@
       </div>
     </section>
 
-    <!-- Calendário (placeholder) -->
+    <!-- Calendário: agenda de tarefas -->
     <section data-section="calendario" hidden>
-      <div class="card empty" style="padding:64px 20px">
-        <div class="ico" data-icon="calendar"></div>
-        <h2>Calendário</h2>
-        <p>Essa área vai chegar em breve pra você planejar seus conteúdos.</p>
-        <span class="chip">Em breve</span>
+      <div class="page-head">
+        <div>
+          <h1>Agenda</h1>
+          <p class="sub">Suas tarefas do dia, com o mês inteiro à vista.</p>
+        </div>
+        <button class="btn primary" id="tarefa-nova"><span data-icon="plus"></span> Nova tarefa</button>
       </div>
+      <div class="agenda">
+        <div class="card cal-card">
+          <div class="cal-head">
+            <button class="icon-btn" id="cal-ant" aria-label="Mês anterior" data-icon="chevron-left"></button>
+            <h2 id="cal-mes" aria-live="polite"></h2>
+            <button class="icon-btn" id="cal-prox" aria-label="Próximo mês" data-icon="chevron-right"></button>
+            <button class="btn sm" id="cal-hoje">Hoje</button>
+          </div>
+          <div class="cal-semana" aria-hidden="true"><span>dom</span><span>seg</span><span>ter</span><span>qua</span><span>qui</span><span>sex</span><span>sáb</span></div>
+          <div class="cal-grid" id="cal-grid" role="grid"></div>
+          <div class="cal-legenda" id="cal-legenda"></div>
+        </div>
+        <div class="card dia-card">
+          <div class="dia-head">
+            <div>
+              <h2 id="dia-titulo"></h2>
+              <p class="sub" id="dia-sub"></p>
+            </div>
+          </div>
+          <div class="progresso" aria-hidden="true"><i id="dia-barra"></i></div>
+          <form class="tarefa-rapida" id="tarefa-rapida">
+            <input class="input" type="time" id="tr-hora" aria-label="Horário (opcional)">
+            <input class="input" id="tr-titulo" placeholder="O que precisa fazer?" aria-label="Nova tarefa" required maxlength="160">
+            <select class="input" id="tr-cat" aria-label="Categoria"></select>
+            <button class="btn primary" type="submit"><span data-icon="plus"></span> Adicionar</button>
+          </form>
+          <div class="table-wrap" id="dia-lista"></div>
+        </div>
+      </div>
+
+      <dialog class="dialogo" id="tarefa-dialog" aria-labelledby="td-titulo-h">
+        <form method="dialog" id="tarefa-form">
+          <h2 id="td-titulo-h">Tarefa</h2>
+          <label class="label" for="td-titulo">Título</label>
+          <input class="input" id="td-titulo" required maxlength="160">
+          <div class="dialogo-linha">
+            <div><label class="label" for="td-dia">Dia</label><input class="input" type="date" id="td-dia" required></div>
+            <div><label class="label" for="td-hora">Horário</label><input class="input" type="time" id="td-hora"></div>
+            <div><label class="label" for="td-cat">Categoria</label><select class="input" id="td-cat"></select></div>
+          </div>
+          <label class="label" for="td-notas">Observações</label>
+          <textarea class="input" id="td-notas" rows="3" maxlength="1000" placeholder="Detalhes, link, marca..."></textarea>
+          <label class="switch" style="margin-top:12px"><input type="checkbox" id="td-feita"><span class="track"></span> Concluída</label>
+          <div class="dialogo-acoes">
+            <button class="btn danger" type="button" id="td-apagar">Apagar</button>
+            <span style="flex:1"></span>
+            <button class="btn" type="button" id="td-cancelar">Cancelar</button>
+            <button class="btn primary" type="submit" id="td-salvar">Salvar</button>
+          </div>
+        </form>
+      </dialog>
+    </section>
+
+    <!-- Portfólio: métricas do site -->
+    <section data-section="portfolio" hidden>
+      <div class="page-head">
+        <div>
+          <h1>Portfólio</h1>
+          <p class="sub">Quem visita o seu site e quais vídeos mais assistem.</p>
+        </div>
+        <a class="btn" href="https://yasmincarreira.com/portfolio/" target="_blank" rel="noopener"><span data-icon="link"></span> Abrir o site</a>
+      </div>
+      <div id="portfolio-conteudo"></div>
     </section>
 
     <!-- Instagram -->
@@ -148,5 +214,6 @@
 
 <script src="app.js"></script>
 <script src="editor.js"></script>
+<script src="paginas.js"></script>
 </body>
 </html>

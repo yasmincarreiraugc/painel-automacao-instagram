@@ -45,6 +45,11 @@ const ICONS = {
   bookmark: '<path d="M6 3h12v18l-6-4-6 4z"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 13v4M8 21h8M9 17h6"/>',
+  "chevron-left": '<path d="M15 5l-7 7 7 7"/>',
+  "chevron-right": '<path d="M9 5l7 7-7 7"/>',
+  briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  play: '<path d="M8 5v14l11-7z"/>',
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   grid: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a5.5 5.5 0 0 1 3.5 6"/>',
@@ -224,7 +229,7 @@ function entrarApp(email) {
   irPara(location.hash.replace("#", "") || "inicio");
 }
 
-const PAGINAS = ["inicio", "calendario", "instagram"];
+const PAGINAS = ["inicio", "calendario", "instagram", "portfolio"];
 function irPara(pagina) {
   if (!PAGINAS.includes(pagina)) pagina = "inicio";
   $$("[data-section]").forEach((s) => (s.hidden = s.dataset.section !== pagina));
@@ -232,6 +237,8 @@ function irPara(pagina) {
   $("#app-view").classList.remove("menu-open");
   if (location.hash !== `#${pagina}`) history.replaceState(null, "", `#${pagina}`);
   if (pagina === "inicio") carregarResumo();
+  if (pagina === "calendario") window.Agenda?.abrir();
+  if (pagina === "portfolio") window.Portfolio?.abrir();
   if (pagina === "instagram") abrirAba(store.get("aba_ig") || "analises");
 }
 
@@ -252,6 +259,7 @@ async function carregarResumo() {
   $("#st-leads").textContent = fmt(leads);
   $("#st-autos").textContent = fmt(autos);
   $("#st-dms").textContent = fmt(dms);
+  window.Agenda?.resumoHoje();
 }
 
 // =====================================================================

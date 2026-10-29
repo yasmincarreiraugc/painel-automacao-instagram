@@ -3,7 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel de Automação</title>
+  <title>Yasmin Carreira | Painel</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -3 46 46'%3E%3Cpath d='M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z' fill='%23ff99d9' stroke='%231e1915' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@500;700&family=Montserrat:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
   <!-- Cliente oficial do Supabase (só é usado quando o site está no ar) -->
@@ -16,7 +20,7 @@
      ================================================================= -->
 <div id="login-view" class="login-wrap" hidden>
   <div class="login-card">
-    <div class="logo"><span class="mark" data-icon="spark"></span> Painel de Automação</div>
+    <div class="marca"><svg class="estrela" viewBox="-3 -3 46 46" aria-hidden="true"><path d="M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z"/></svg><span>Yasmin<br>Carreira</span></div>
     <div class="card">
       <h1>Entrar</h1>
       <p class="sub" style="margin-bottom:20px">Acesse o seu painel.</p>
@@ -44,17 +48,35 @@
      ================================================================= -->
 <div id="app-view" class="app" hidden>
   <header class="topbar">
-    <div class="logo"><span class="mark" data-icon="spark"></span> Painel</div>
+    <div class="marca"><svg class="estrela" viewBox="-3 -3 46 46" aria-hidden="true"><path d="M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z"/></svg><span>Yasmin<br>Carreira</span></div>
     <button class="icon-btn" id="menu-toggle" aria-label="Abrir menu" data-icon="menu"></button>
   </header>
 
   <aside class="sidebar">
-    <div class="logo"><span class="mark" data-icon="spark"></span> Painel de Automação</div>
-    <nav class="nav">
+    <div class="marca"><svg class="estrela" viewBox="-3 -3 46 46" aria-hidden="true"><path d="M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z"/></svg><span>Yasmin<br>Carreira</span></div>
+    <nav class="nav" aria-label="Menu principal">
+      <p class="nav-grupo">Dia a dia</p>
       <button data-page="inicio"><span data-icon="home"></span> Início</button>
-      <button data-page="calendario"><span data-icon="calendar"></span> Calendário</button>
+      <button data-page="calendario"><span data-icon="calendar"></span> Agenda</button>
+      <button data-page="roteiros"><span data-icon="file"></span> Roteiros</button>
+
+      <p class="nav-grupo">Negócio</p>
+      <button data-page="campanhas"><span data-icon="briefcase"></span> Campanhas</button>
+      <button data-page="analista"><span data-icon="search"></span> Analista</button>
+
+      <p class="nav-grupo">Conteúdo</p>
       <button data-page="instagram"><span data-icon="instagram"></span> Instagram</button>
-      <button data-page="portfolio"><span data-icon="briefcase"></span> Portfólio</button>
+      <button data-page="quadros"><span data-icon="grid"></span> Quadros</button>
+      <button data-page="emalta"><span data-icon="flame"></span> Em alta</button>
+      <button data-page="estrategia"><span data-icon="target"></span> Estratégia</button>
+
+      <p class="nav-grupo">Estagiário</p>
+      <button data-page="criarposts"><span data-icon="image"></span> Criar posts</button>
+      <button data-page="criarvideos"><span data-icon="video"></span> Criar vídeos</button>
+
+      <hr class="nav-linha">
+      <button data-page="site"><span data-icon="globe"></span> Site</button>
+      <button data-page="portfolio"><span data-icon="play"></span> Portfólio</button>
     </nav>
     <div class="side-foot">
       <div class="who" id="who"></div>
@@ -70,29 +92,55 @@
 
     <!-- Início -->
     <section data-section="inicio" hidden>
+      <p class="sobretitulo" id="in-data"></p>
+      <h1 class="titulo-grande" id="in-titulo">Oi, Yasmin.</h1>
+      <div class="grid tons" id="in-cartoes"></div>
+      <div class="meta-card" id="in-meta"></div>
+      <div class="grid tres" id="in-trio"></div>
+      <div class="grid dois" id="in-dupla"></div>
+    </section>
+
+    <!-- Roteiros -->
+    <section data-section="roteiros" hidden>
       <div class="page-head">
         <div>
-          <h1>Bem-vindo ao seu painel</h1>
-          <p class="sub">Um resumo rápido do que está acontecendo.</p>
+          <p class="sobretitulo">Do gancho ao CTA</p>
+          <h1 class="titulo-grande">Seus <mark>roteiros</mark></h1>
+          <p class="sub">Ideias, roteiros em andamento e o que já foi gravado.</p>
         </div>
+        <button class="btn primary" id="roteiro-novo"><span data-icon="plus"></span> Novo roteiro</button>
       </div>
-      <div class="grid stats">
-        <div class="card stat"><span class="label">Leads captados</span><div class="num" id="st-leads">0</div><div class="foot">pessoas que interagiram</div></div>
-        <div class="card stat"><span class="label">Automações ativas</span><div class="num" id="st-autos">0</div><div class="foot">respondendo agora</div></div>
-        <div class="card stat"><span class="label">DMs enviadas</span><div class="num" id="st-dms">0</div><div class="foot">últimos 7 dias</div></div>
-        <div class="card stat"><span class="label">Tarefas de hoje</span><div class="num" id="st-tarefas">0</div><div class="foot" id="st-tarefas-foot">nada marcado pra hoje</div></div>
-      </div>
-      <div class="shortcuts">
-        <button class="btn primary" data-go="instagram"><span data-icon="instagram"></span> Ir pro Instagram</button>
-        <button class="btn" data-go="calendario"><span data-icon="calendar"></span> Abrir Calendário</button>
-      </div>
+      <div id="roteiros-conteudo"></div>
     </section>
+
+    <!-- Campanhas -->
+    <section data-section="campanhas" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Central de campanhas</p>
+          <h1 class="titulo-grande">Suas <mark class="amarelo">campanhas</mark></h1>
+          <p class="sub">Marca, valor, prazo, pagamento e roteiro no mesmo lugar.</p>
+        </div>
+        <button class="btn primary" id="campanha-nova"><span data-icon="plus"></span> Nova campanha</button>
+      </div>
+      <div id="campanhas-conteudo"></div>
+    </section>
+
+    <!-- Páginas que ainda vão ganhar conteúdo -->
+    <section data-section="analista" hidden data-embreve="Analista|O que está funcionando no seu conteúdo, com sugestões do que repetir e do que ajustar."></section>
+    <section data-section="quadros" hidden data-embreve="Quadros|Os seus quadros fixos de conteúdo, com a frequência e o que já foi ao ar em cada um."></section>
+    <section data-section="emalta" hidden data-embreve="Em alta|Trends, pautas e achados do momento, separados por tema, prontos pra virar roteiro."></section>
+    <section data-section="estrategia" hidden data-embreve="Estratégia|Os seus objetivos do mês, os pilares de conteúdo e o plano pra chegar lá."></section>
+    <section data-section="criarposts" hidden data-embreve="Criar posts|Monte posts e carrosséis com a sua identidade visual, prontos pra publicar."></section>
+    <section data-section="criarvideos" hidden data-embreve="Criar vídeos|Organize as cenas, o texto e as legendas dos seus vídeos antes de gravar."></section>
+    <section data-section="site" hidden data-embreve="Site|O seu site yasmincarreira.com: mensagens recebidas e o que atualizar."></section>
 
     <!-- Calendário: agenda de tarefas -->
     <section data-section="calendario" hidden>
       <div class="page-head">
         <div>
-          <h1>Agenda</h1>
+          <p class="sobretitulo">Dia a dia</p>
+          <h1 class="titulo-grande">Sua <mark class="azul">agenda</mark></h1>
           <p class="sub">Suas tarefas do dia, com o mês inteiro à vista.</p>
         </div>
         <button class="btn primary" id="tarefa-nova"><span data-icon="plus"></span> Nova tarefa</button>
@@ -154,7 +202,8 @@
     <section data-section="portfolio" hidden>
       <div class="page-head">
         <div>
-          <h1>Portfólio</h1>
+          <p class="sobretitulo">yasmincarreira.com</p>
+          <h1 class="titulo-grande">Seu <mark>portfólio</mark></h1>
           <p class="sub">Quem visita o seu site e quais vídeos mais assistem.</p>
         </div>
         <a class="btn" href="https://yasmincarreira.com/portfolio/" target="_blank" rel="noopener"><span data-icon="link"></span> Abrir o site</a>
@@ -166,7 +215,8 @@
     <section data-section="instagram" hidden>
       <div class="page-head">
         <div>
-          <h1>Instagram</h1>
+          <p class="sobretitulo">@yasmincarreira_</p>
+          <h1 class="titulo-grande">Seu <mark class="azul">Instagram</mark></h1>
           <p class="sub">Análises da conta, respostas automáticas no direct e os seus leads.</p>
         </div>
       </div>
@@ -215,5 +265,7 @@
 <script src="app.js"></script>
 <script src="editor.js"></script>
 <script src="paginas.js"></script>
+<script src="negocio.js"></script>
+<script src="inicio.js"></script>
 </body>
 </html>

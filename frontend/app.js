@@ -50,6 +50,16 @@ const ICONS = {
   briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
   play: '<path d="M8 5v14l11-7z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  flame: '<path d="M12 21c-4 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.4 3.6-8.3.4 1.6 1.4 2.8 2.6 3.4.3-2.6 1.6-5 3.8-6.4-.3 2.8.9 4.8 2.2 6.4 1.2 1.5 1.8 3 1.8 4.9C19.5 18.4 16 21 12 21z"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5L6 20"/>',
+  video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
+  "eye-off": '<path d="M3 3l18 18M10.6 6.1A10.5 10.5 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.8M6.3 7.4A16.7 16.7 0 0 0 2 12s3.6 6 10 6c1.5 0 2.9-.3 4.1-.9M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  money: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   grid: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a5.5 5.5 0 0 1 3.5 6"/>',
@@ -229,39 +239,42 @@ function entrarApp(email) {
   irPara(location.hash.replace("#", "") || "inicio");
 }
 
-const PAGINAS = ["inicio", "calendario", "instagram", "portfolio"];
+const PAGINAS = ["inicio", "calendario", "roteiros", "campanhas", "analista", "instagram", "quadros", "emalta",
+  "estrategia", "criarposts", "criarvideos", "site", "portfolio"];
 function irPara(pagina) {
   if (!PAGINAS.includes(pagina)) pagina = "inicio";
   $$("[data-section]").forEach((s) => (s.hidden = s.dataset.section !== pagina));
   $$(".nav [data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === pagina));
   $("#app-view").classList.remove("menu-open");
   if (location.hash !== `#${pagina}`) history.replaceState(null, "", `#${pagina}`);
-  if (pagina === "inicio") carregarResumo();
+  window.scrollTo(0, 0);
+  if (pagina === "inicio") window.Inicio?.abrir();
   if (pagina === "calendario") window.Agenda?.abrir();
+  if (pagina === "roteiros") window.Roteiros?.abrir();
+  if (pagina === "campanhas") window.Campanhas?.abrir();
   if (pagina === "portfolio") window.Portfolio?.abrir();
   if (pagina === "instagram") abrirAba(store.get("aba_ig") || "analises");
+  const sec = $(`[data-section="${pagina}"]`);
+  if (sec?.dataset.embreve && !sec.innerHTML.trim()) emBreve(sec);
+}
+
+// Páginas que ainda não têm conteúdo: título no mesmo estilo + aviso.
+function emBreve(sec) {
+  const [nome, texto] = sec.dataset.embreve.split("|");
+  sec.innerHTML = `
+    <p class="sobretitulo">Em construção</p>
+    <h1 class="titulo-grande"><mark>${esc(nome)}</mark></h1>
+    <div class="card empty" style="margin-top:20px">
+      <div class="ico">${icon("spark")}</div>
+      <h2>Em breve</h2>
+      <p>${esc(texto)}</p>
+      <span class="chip">Me conta o que você quer aqui</span>
+    </div>`;
 }
 
 $$(".nav [data-page]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.page)));
 $$("[data-go]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.go)));
 $("#menu-toggle").addEventListener("click", () => $("#app-view").classList.toggle("menu-open"));
-
-// =====================================================================
-// INÍCIO
-// =====================================================================
-async function carregarResumo() {
-  const seteDias = new Date(Date.now() - 7 * 86400000).toISOString();
-  const [leads, autos, dms] = await Promise.all([
-    api.contar("ig_leads"),
-    api.contar("ig_automations", (q) => q.eq("active", true)),
-    api.contar("ig_deliveries", (q) => q.eq("status", "ok").gte("ts", seteDias)),
-  ]);
-  $("#st-leads").textContent = fmt(leads);
-  $("#st-autos").textContent = fmt(autos);
-  $("#st-dms").textContent = fmt(dms);
-  window.Agenda?.resumoHoje();
-}
-
 // =====================================================================
 // INSTAGRAM: abas
 // =====================================================================

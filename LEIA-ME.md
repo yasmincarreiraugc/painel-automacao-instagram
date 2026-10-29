@@ -50,6 +50,7 @@ são pra colocar no ar de verdade, com login e dados salvos.
    - `06_interacoes.sql`: contador de interações e a visão da aba Interações (`ig_leads_painel`).
    - `07_analises.sql`: base da aba Análises (foto diária dos seguidores e cache). Troque SEU_PROJETO e SEU_SCHED_SECRET antes, igual ao 04.
    - `08_agenda_e_site.sql`: a agenda (tabela `tarefas`) e as métricas do site do portfólio (`site_eventos` e `site_resumo`).
+   - `09_roteiros_campanhas.sql`: campanhas, roteiros e ajustes do painel (meta de seguidores).
    - (o `04_agendamento.sql` fica pro Passo 5)
 
 > **ATENÇÃO:** o `02_freio.sql` é obrigatório. Sem as funções do freio, ele falha

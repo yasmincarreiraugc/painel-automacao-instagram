@@ -225,17 +225,8 @@ window.Agenda = (() => {
     });
   }
 
-  // Cartão "Tarefas de hoje" no Início.
-  async function resumoHoje() {
-    try {
-      const l = await dados.listar(hoje(), hoje());
-      const feitas = l.filter((t) => t.concluida).length;
-      $("#st-tarefas").textContent = l.length ? `${feitas}/${l.length}` : "0";
-      $("#st-tarefas-foot").textContent = l.length ? (feitas === l.length ? "tudo feito, parabéns!" : `${l.length - feitas} pra fazer`) : "nada marcado pra hoje";
-    } catch (e) { console.warn(e); }
-  }
-
-  return { abrir() { ligar(); carregar(); }, resumoHoje };
+  // O Início usa as mesmas tarefas ("O que fazer hoje" e "Vem aí").
+  return { abrir() { ligar(); carregar(); }, listar: dados.listar, salvar: dados.salvar, cat, iso, hora };
 })();
 
 // ---------------------------------------------------------------------

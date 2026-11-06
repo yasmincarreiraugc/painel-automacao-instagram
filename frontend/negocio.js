@@ -51,6 +51,13 @@ function prazoTexto(iso) {
   const n = diasAte(iso);
   return n < 0 ? `atrasada ${-n} dia(s)` : n === 0 ? "é hoje" : n === 1 ? "amanhã" : `em ${n} dias`;
 }
+// Rodapé do cartão: prazo com contagem enquanto está em andamento; depois
+// de entregue, só a data (com o ano quando não é o ano atual).
+function entregaTexto(iso, emAndamento) {
+  if (!iso) return emAndamento ? "sem prazo" : "entregue";
+  const data = diaMes(iso) + (iso.slice(0, 4) !== hojeIso().slice(0, 4) ? ` ${iso.slice(0, 4)}` : "");
+  return emAndamento ? `${data} · ${prazoTexto(iso)}` : `entregue em ${data}`;
+}
 
 // Monta uma janela (dialog) uma vez só e devolve o elemento.
 function janela(id, html) {
@@ -194,8 +201,9 @@ window.Campanhas = (() => {
         ${c.permuta ? `<p class="camp-entrega">Permuta: ${esc(c.permuta)}</p>` : ""}
         ${c.entregaveis ? `<p class="camp-entrega">${esc(c.entregaveis)}</p>` : ""}
         <div class="camp-rodape">
-          <span class="${atrasada ? "atraso" : ""}">${icon("clock")} ${c.prazo_entrega ? `${diaMes(c.prazo_entrega)} · ${prazoTexto(c.prazo_entrega)}` : "sem prazo"}</span>
-          <label class="pago-chk" title="Pagamento recebido"><input type="checkbox" data-pago="${c.id}" ${c.pago ? "checked" : ""}> pago</label>
+          <span class="${atrasada ? "atraso" : ""}">${icon("clock")} ${entregaTexto(c.prazo_entrega, ["negociando", "ativa"].includes(c.status))}</span>
+          ${c.tipo_pagamento === "permuta" ? `<span class="pago-chk">sem pagamento</span>`
+            : `<label class="pago-chk" title="Pagamento recebido"><input type="checkbox" data-pago="${c.id}" ${c.pago ? "checked" : ""}> pago</label>`}
         </div>
       </article>`;
   }
@@ -478,7 +486,7 @@ window.Clientes = (() => {
         ${c.entregaveis ? `<p class="camp-entrega">${esc(c.entregaveis)}</p>` : ""}
         ${c.link ? `<p class="camp-entrega"><a href="${esc(/^https?:\/\//.test(c.link) ? c.link : "https://" + c.link)}" target="_blank" rel="noopener">${icon("link")} ver no ar</a></p>` : ""}
         <div class="camp-rodape">
-          <span class="${atrasado ? "atraso" : ""}">${icon("clock")} ${c.prazo_entrega ? `${diaMes(c.prazo_entrega)} · ${prazoTexto(c.prazo_entrega)}` : "sem prazo"}</span>
+          <span class="${atrasado ? "atraso" : ""}">${icon("clock")} ${entregaTexto(c.prazo_entrega, ["orcamento", "producao"].includes(c.status))}</span>
           <label class="pago-chk" title="Pagamento completo recebido"><input type="checkbox" data-cli-pago="${c.id}" ${c.pago ? "checked" : ""}> pago</label>
         </div>
       </article>`;
@@ -612,11 +620,15 @@ window.Negocio = (() => {
     return l;
   }
 
-  // Trabalhos fechados (saíram de negociação/orçamento).
+  // Trabalhos fechados (saíram de negociação/orçamento). A data é a do
+  // próprio trabalho (entrega, entrada ou pagamento), não a do cadastro,
+  // pra quem cadastra trabalhos antigos não cair tudo no mês de hoje.
   function fechados() {
     return [
-      ...camps.filter((c) => c.status !== "negociando").map((c) => ({ data: dataCriacao(c), valor: window.Campanhas.dinheiro(c), permuta: c.tipo_pagamento !== "dinheiro" })),
-      ...clis.filter((c) => c.status !== "orcamento").map((c) => ({ data: dataCriacao(c), valor: Number(c.valor || 0) })),
+      ...camps.filter((c) => c.status !== "negociando").map((c) => ({
+        data: c.prazo_entrega || c.data_pagamento || dataCriacao(c), valor: window.Campanhas.dinheiro(c) })),
+      ...clis.filter((c) => c.status !== "orcamento").map((c) => ({
+        data: c.data_entrada || c.prazo_entrega || c.data_pagamento || dataCriacao(c), valor: Number(c.valor || 0) })),
     ];
   }
 
@@ -692,14 +704,13 @@ window.Negocio = (() => {
       <p class="hint">${linhas.map((x) => `${x.nome}: ${Math.round((x.v / total) * 100)}%`).join(" · ")}</p>`;
   }
 
-  // Últimos 12 meses (ou desde o primeiro recebimento), empilhado.
+  // Do primeiro recebimento até hoje (no mínimo 6 meses, no máximo 24).
   function meses(ent) {
     const atual = hojeIso().slice(0, 7);
+    const primeiro = ent.map((e) => mesDe(e.data)).sort()[0] || atual;
     const lista = [atual];
-    while (lista.length < 12) lista.unshift(mesAnterior(lista[0]));
-    const primeiro = ent.map((e) => mesDe(e.data)).sort()[0];
-    const corte = primeiro && primeiro > lista[0] ? lista.indexOf(primeiro) : 0;
-    return lista.slice(Math.min(corte, 6)).map((ym) => {
+    while (lista.length < 24 && (lista.length < 6 || lista[0] > primeiro)) lista.unshift(mesAnterior(lista[0]));
+    return lista.map((ym) => {
       const doMes = ent.filter((e) => mesDe(e.data) === ym);
       return { ym, camp: soma(doMes.filter((e) => e.fonte === "campanha")), cli: soma(doMes.filter((e) => e.fonte === "cliente")) };
     });
@@ -711,7 +722,7 @@ window.Negocio = (() => {
     const max = Math.max(...ms.map((m) => m.camp + m.cli));
     if (!max) return `<div class="soft-box" style="margin-top:12px">O gráfico aparece quando entrar o primeiro pagamento.</div>`;
     return `<div class="neg-grafico" role="img" aria-label="Recebido por mês, separado entre clientes e campanhas">
-      ${ms.map((m) => {
+      ${ms.map((m, i) => {
         const tot = m.camp + m.cli;
         return `<div class="neg-col" tabindex="0" aria-label="${nomeMes(m.ym, true)}: ${reais(tot)}">
           <div class="neg-tt"><b>${nomeMes(m.ym, true)}</b><span><i style="background:${COR_CLI}"></i>Clientes <b class="valor">${reais(m.cli)}</b></span>
@@ -719,7 +730,7 @@ window.Negocio = (() => {
           <div class="neg-pilha" style="height:${(tot / max) * 100}%">
             ${m.cli ? `<i style="flex:${m.cli};background:${COR_CLI}"></i>` : ""}${m.camp ? `<i style="flex:${m.camp};background:${COR_CAMP}"></i>` : ""}
           </div>
-          <span class="neg-mes">${nomeMes(m.ym)}</span>
+          <span class="neg-mes">${nomeMes(m.ym)}${i === 0 || m.ym.endsWith("-01") ? ` ${m.ym.slice(2, 4)}` : ""}</span>
         </div>`;
       }).join("")}
     </div>`;

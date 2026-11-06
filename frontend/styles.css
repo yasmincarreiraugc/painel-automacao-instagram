@@ -1088,3 +1088,58 @@ label.seg { display: inline-flex; align-items: center; cursor: pointer; }
   .cs-previa-escala { transform: scale(0.3); }
 }
 .cs-props textarea.input { height: auto; min-height: 96px; resize: vertical; }
+
+/* ---------- Clientes e Visão geral do negócio ---------- */
+.badge.st-cli-orcamento { background: var(--manteiga); color: var(--text); }
+.badge.st-cli-producao { background: var(--azul-claro); color: var(--text); }
+.badge.st-cli-entregue { background: var(--rosa-claro); color: var(--text); }
+.badge.st-cli-finalizado { background: var(--creme-escuro); color: var(--text); }
+.camp a { color: inherit; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.camp a svg { width: 13px; height: 13px; }
+.neg-legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.neg-legenda span, .neg-tt span { display: inline-flex; align-items: center; gap: 6px; }
+.neg-legenda i, .neg-tt i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.neg-grafico { display: flex; align-items: stretch; gap: 8px; height: 220px; padding-top: 8px; border-bottom: 1px solid var(--border); }
+.neg-col { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; outline: none; }
+.neg-pilha { width: 100%; max-width: 44px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+.neg-pilha i { display: block; min-height: 3px; }
+.neg-pilha i:first-child { border-radius: 4px 4px 0 0; }
+.neg-mes { position: absolute; bottom: -22px; font-size: 11px; color: var(--muted); }
+.neg-grafico { margin-bottom: 26px; }
+.neg-tt { display: none; position: absolute; bottom: calc(100% - 20px); left: 50%; transform: translateX(-50%); z-index: 5; background: var(--text); color: #fff;
+  border-radius: 12px; padding: 10px 12px; font-size: 12px; white-space: nowrap; flex-direction: column; gap: 4px; pointer-events: none; }
+.neg-tt b { font-weight: 600; }
+.neg-col:hover .neg-tt, .neg-col:focus .neg-tt { display: flex; }
+.neg-col:hover .neg-pilha, .neg-col:focus .neg-pilha { opacity: .85; }
+.neg-col:first-child .neg-tt { left: 0; transform: none; }
+.neg-col:last-child .neg-tt { left: auto; right: 0; transform: none; }
+@media (max-width: 760px) { .neg-grafico { gap: 4px; height: 180px; } .neg-mes { font-size: 10px; } }
+
+/* ---------- Estratégia: quadro semanal no topo, dias lado a lado ---------- */
+.semana-quadro { margin-bottom: 22px; }
+.semana-quadro .semana-topo { grid-template-columns: auto minmax(0, 1fr) auto; }
+.semana-nav { display: flex; align-items: center; gap: 4px; }
+.semana-nav .icon-btn { color: #fff; width: 30px; height: 30px; }
+.semana-nav .icon-btn:disabled { opacity: .3; cursor: default; }
+.semana-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+.semana-dias .dia30 { padding: 10px; gap: 6px; min-width: 0; }
+.semana-dias .dia30.hoje { outline: 3px solid var(--rosa); outline-offset: -3px; }
+.dia30-cab { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 2px; }
+.dia30-cab span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+.dia30-cab b { font-family: var(--fonte-titulo); font-size: 24px; line-height: 1; }
+.dia30-cab em { margin-left: auto; font-style: normal; font-size: 10px; font-weight: 700; background: var(--rosa); border-radius: 99px; padding: 1px 7px; }
+.semana-dias .fmt { align-self: flex-start; }
+.semana-dias .dia30 h3 { font-size: 13px; line-height: 1.3; }
+.semana-dias .dia30 .gancho { font-size: 11.5px; }
+.semana-dias .dia30-pilar { font-size: 10.5px; line-height: 1.3; }
+.semana-dias .dia30 details p { margin: 6px 0 0; }
+.semana-dias .dia30-acoes .btn { font-size: 11px; padding: 0 4px; }
+.semana-quadro > .nota-auto { margin: 10px 0 0; display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 1100px) {
+  .semana-dias { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+  .semana-dias .dia30 { flex: 0 0 200px; scroll-snap-align: start; }
+}
+@media (max-width: 760px) {
+  .semana-quadro .semana-topo { grid-template-columns: 1fr; }
+  .semana-dias .dia30 { flex-basis: 72%; }
+}

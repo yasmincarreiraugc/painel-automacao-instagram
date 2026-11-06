@@ -1,6 +1,6 @@
 // =====================================================================
-// negocio.js: Campanhas e Roteiros.
-// Dados no Supabase (tabelas campanhas e roteiros). No modo de teste
+// negocio.js: Campanhas, Clientes, Visão geral e Roteiros.
+// Dados no Supabase (tabelas campanhas, clientes e roteiros). No modo de teste
 // local, ficam guardados no navegador.
 // Usa as peças do app.js: sb, $, $$, esc, fmt, icon, toast, store.
 // =====================================================================
@@ -360,7 +360,389 @@ window.Campanhas = (() => {
     $("#campanha-nova").addEventListener("click", () => editar(null));
   }
 
-  return { abrir, carregar, resumo, reais, editar };
+  return { abrir, carregar, resumo, reais, editar, dinheiro };
+})();
+
+// ---------------------------------------------------------------------
+// CLIENTES: bio links, portfólios e sites (mesmo jeito das campanhas,
+// com entrada/sinal).
+// ---------------------------------------------------------------------
+window.Clientes = (() => {
+  const db = tabela("clientes");
+  const SERVICOS = [
+    { id: "bio_link", nome: "Bio link", cor: "#ff99d9" },
+    { id: "portfolio", nome: "Portfólio", cor: "#78b4f4" },
+    { id: "site", nome: "Site", cor: "#f2db33" },
+    { id: "outro", nome: "Outro", cor: "#c9c2b8" },
+  ];
+  const ORIGENS = [
+    { id: "instagram", nome: "Instagram", cor: "#ff99d9" },
+    { id: "indicacao", nome: "Indicação", cor: "#78b4f4" },
+    { id: "whatsapp", nome: "WhatsApp", cor: "#f2db33" },
+    { id: "outro", nome: "Outro", cor: "#c9c2b8" },
+  ];
+  const STATUS = [
+    { id: "orcamento", nome: "Orçamento" },
+    { id: "producao", nome: "Em produção" },
+    { id: "entregue", nome: "Entregue" },
+    { id: "finalizado", nome: "Finalizado" },
+  ];
+  const RAMOS = ["Criadora de conteúdo", "UGC creator", "Confeitaria", "Estética", "Salão de beleza", "Moda", "Loja online",
+    "Saúde", "Fotografia", "Educação", "Imobiliária", "Alimentação", "Advocacia", "Consultoria"];
+  const servico = (id) => SERVICOS.find((s) => s.id === id) || SERVICOS[SERVICOS.length - 1];
+  const origem = (id) => ORIGENS.find((o) => o.id === id) || ORIGENS[ORIGENS.length - 1];
+  const statusNome = (id) => STATUS.find((s) => s.id === id)?.nome || id;
+  // Quanto já entrou e quanto falta de um cliente.
+  const recebido = (c) => (c.pago ? Number(c.valor || 0) : Math.min(Number(c.entrada || 0), Number(c.valor || 0)));
+  const falta = (c) => (c.status === "orcamento" ? 0 : Math.max(0, Number(c.valor || 0) - recebido(c)));
+  let lista = [];
+  let filtro = "andamento";
+  let ligado = false;
+
+  async function carregar() {
+    try { lista = await db.listar(); } catch (e) { console.warn(e); lista = []; toast("Não consegui carregar os clientes.", "err"); }
+    return lista;
+  }
+
+  async function abrir() {
+    ligar();
+    $("#clientes-conteudo").innerHTML = `<p class="sub">Carregando...</p>`;
+    await carregar();
+    render();
+  }
+
+  function render() {
+    const mes = hojeIso().slice(0, 7);
+    const fechados = lista.filter((c) => c.status !== "orcamento");
+    const pendentes = fechados.filter((c) => falta(c) > 0);
+    const proximos = lista.filter((c) => c.status === "producao" && c.prazo_entrega && c.prazo_entrega >= hojeIso())
+      .sort((a, b) => a.prazo_entrega.localeCompare(b.prazo_entrega));
+    const prox = proximos[0];
+    const recMes = window.Negocio.entradas([], lista).filter((e) => e.data.startsWith(mes)).reduce((t, e) => t + e.valor, 0);
+    const visiveis = lista.filter((c) => filtro === "todos" ? true
+      : filtro === "andamento" ? ["orcamento", "producao"].includes(c.status) : ["entregue", "finalizado"].includes(c.status));
+    const nAnd = lista.filter((c) => ["orcamento", "producao"].includes(c.status)).length;
+
+    $("#clientes-conteudo").innerHTML = `
+      <div class="grid tons">
+        <div class="tom rosa"><span>A receber</span><b class="valor">${reais(pendentes.reduce((t, c) => t + falta(c), 0))}</b><small>${pendentes.length} cliente(s) com saldo aberto</small></div>
+        <div class="tom amarelo"><span>Recebido no mês</span><b class="valor">${reais(recMes)}</b><small>entradas e pagamentos</small></div>
+        <div class="tom azul"><span>Em produção</span><b>${lista.filter((c) => c.status === "producao").length}</b><small>${lista.filter((c) => c.status === "orcamento").length ? `+ ${lista.filter((c) => c.status === "orcamento").length} em orçamento` : "trabalhos rodando agora"}</small></div>
+        <div class="tom creme"><span>Próxima entrega</span><b>${prox ? diaMes(prox.prazo_entrega) : "nenhuma"}</b><small>${prox ? esc(prox.nome) + ", " + prazoTexto(prox.prazo_entrega) : "sem prazo marcado"}</small></div>
+        <div class="tom rosa"><span>Clientes atendidos</span><b>${new Set(fechados.map((c) => String(c.nome).trim().toLowerCase())).size}</b><small>trabalhos fechados até hoje</small></div>
+      </div>
+      <div class="grid dois">
+        <div class="card"><h2>${icon("globe")} O que você mais vende</h2>${barras(fechados, SERVICOS, "servico", "trabalho")}</div>
+        <div class="card"><h2>${icon("target")} De onde vêm seus clientes</h2>${barras(lista, ORIGENS, "origem", "cliente")}</div>
+      </div>
+      <div class="periodos" role="group" aria-label="Filtrar clientes" style="margin:22px 0 14px">
+        ${[["andamento", `Em andamento ${nAnd}`], ["entregues", "Entregues"], ["todos", `Todos ${lista.length}`]].map(([v, t]) =>
+          `<button class="seg ${v === filtro ? "on" : ""}" data-filtro-cli="${v}">${t}</button>`).join("")}
+      </div>
+      ${visiveis.length ? `<div class="camp-grade">${visiveis.map(cartao).join("")}</div>` : `
+        <div class="card empty"><div class="ico">${icon("users")}</div><h2>${lista.length ? "Nada nesse filtro" : "Nenhum cliente ainda"}</h2>
+          <p>Cadastre o cliente, o serviço, o valor e a entrada. A Visão geral soma tudo com as campanhas.</p>
+          <button class="btn primary" data-cli-novo>${icon("plus")} Novo cliente</button></div>`}`;
+
+    $$("[data-filtro-cli]").forEach((b) => b.addEventListener("click", () => { filtro = b.dataset.filtroCli; render(); }));
+    $$("[data-cli-novo]").forEach((b) => b.addEventListener("click", () => editar(null)));
+    $$("[data-cli]").forEach((el) => {
+      const abre = (ev) => { if (ev.target.closest("[data-cli-pago], a")) return; editar(lista.find((c) => c.id === el.dataset.cli)); };
+      el.addEventListener("click", abre);
+      el.addEventListener("keydown", (ev) => { if (ev.target === el && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); abre(ev); } });
+    });
+    $$("[data-cli-pago]").forEach((inp) => inp.addEventListener("change", async () => {
+      const c = lista.find((x) => x.id === inp.dataset.cliPago);
+      try {
+        Object.assign(c, await db.salvar({ id: c.id, pago: inp.checked, data_pagamento: inp.checked ? (c.data_pagamento || hojeIso()) : null }));
+        toast(inp.checked ? "Pagamento completo marcado." : "Pagamento desmarcado.", "ok");
+        render();
+      } catch (e) { console.warn(e); inp.checked = !inp.checked; toast("Não consegui salvar.", "err"); }
+    }));
+  }
+
+  function cartao(c) {
+    const atrasado = c.status === "producao" && c.prazo_entrega && c.prazo_entrega < hojeIso();
+    const s = servico(c.servico);
+    const rec = recebido(c);
+    return `
+      <article class="card camp" data-cli="${c.id}" tabindex="0" role="button" aria-label="Abrir cliente ${esc(c.nome)}">
+        <div class="camp-topo">
+          <span class="camp-origem" style="--c:${s.cor}">${esc(s.nome)}</span>
+          <span class="badge st-cli-${c.status}">${statusNome(c.status)}</span>
+        </div>
+        <h3>${esc(c.nome)}</h3>
+        <b class="camp-valor"><span class="valor">${reais(c.valor)}</span></b>
+        ${!c.pago && rec > 0 ? `<p class="camp-entrega">Entrada de <span class="valor">${reais(rec)}</span> recebida · falta <span class="valor">${reais(falta(c))}</span></p>` : ""}
+        ${c.ramo ? `<span class="camp-nicho">${esc(c.ramo)}</span>` : ""}
+        ${c.entregaveis ? `<p class="camp-entrega">${esc(c.entregaveis)}</p>` : ""}
+        ${c.link ? `<p class="camp-entrega"><a href="${esc(/^https?:\/\//.test(c.link) ? c.link : "https://" + c.link)}" target="_blank" rel="noopener">${icon("link")} ver no ar</a></p>` : ""}
+        <div class="camp-rodape">
+          <span class="${atrasado ? "atraso" : ""}">${icon("clock")} ${c.prazo_entrega ? `${diaMes(c.prazo_entrega)} · ${prazoTexto(c.prazo_entrega)}` : "sem prazo"}</span>
+          <label class="pago-chk" title="Pagamento completo recebido"><input type="checkbox" data-cli-pago="${c.id}" ${c.pago ? "checked" : ""}> pago</label>
+        </div>
+      </article>`;
+  }
+
+  // Barras de contagem por serviço ou origem.
+  function barras(l, grupos, campo, palavra) {
+    const cont = grupos.map((g) => ({ ...g, n: l.filter((c) => (c[campo] || "outro") === g.id).length })).filter((g) => g.n);
+    if (!cont.length) return `<div class="soft-box" style="margin-top:12px">Aparece aqui quando você cadastrar clientes.</div>`;
+    const max = Math.max(...cont.map((g) => g.n));
+    return `<ol class="retorno">${cont.sort((a, b) => b.n - a.n).map((g) => `
+      <li><span class="nome">${esc(g.nome)}</span><span class="barra"><i style="width:${Math.max(6, (g.n / max) * 100)}%;background:${g.cor}"></i></span><b>${g.n} ${palavra}${g.n > 1 ? "s" : ""}</b></li>`).join("")}</ol>`;
+  }
+
+  function editar(c) {
+    const d = janela("cli-dialog", `
+      <form method="dialog" id="cli-form">
+        <h2>${c ? "Editar cliente" : "Novo cliente"}</h2>
+        <label class="label" for="cl-nome">Cliente</label>
+        <input class="input" id="cl-nome" required maxlength="80" value="${esc(c?.nome || "")}" placeholder="Nome da pessoa ou do negócio">
+        <span class="label">Serviço</span>
+        <div class="periodos" role="radiogroup" aria-label="Serviço">
+          ${SERVICOS.map((s) => `<label class="seg ${(c?.servico || "bio_link") === s.id ? "on" : ""}"><input type="radio" name="cl-servico" value="${s.id}" ${(c?.servico || "bio_link") === s.id ? "checked" : ""} class="sr"> ${s.nome}</label>`).join("")}
+        </div>
+        <div class="dialogo-linha">
+          <div><label class="label" for="cl-valor">Valor total (R$)</label><input class="input" id="cl-valor" type="number" min="0" step="0.01" value="${c ? Number(c.valor) : ""}"></div>
+          <div><label class="label" for="cl-prazo">Prazo de entrega</label><input class="input" id="cl-prazo" type="date" value="${c?.prazo_entrega || ""}"></div>
+          <div><label class="label" for="cl-status">Situação</label><select class="input" id="cl-status">${STATUS.map((s) => `<option value="${s.id}" ${(c?.status || "producao") === s.id ? "selected" : ""}>${s.nome}</option>`).join("")}</select></div>
+        </div>
+        <div class="dialogo-linha dois-col">
+          <div><label class="label" for="cl-entrada">Entrada recebida (R$)</label><input class="input" id="cl-entrada" type="number" min="0" step="0.01" placeholder="0" value="${c && Number(c.entrada) ? Number(c.entrada) : ""}"></div>
+          <div><label class="label" for="cl-dataent">Data da entrada</label><input class="input" id="cl-dataent" type="date" value="${c?.data_entrada || ""}"></div>
+        </div>
+        <div class="dialogo-linha dois-col">
+          <div><label class="label" for="cl-origem">De onde veio</label>
+            <select class="input" id="cl-origem">${ORIGENS.map((o) => `<option value="${o.id}" ${(c?.origem || "instagram") === o.id ? "selected" : ""}>${o.nome}</option>`).join("")}</select></div>
+          <div><label class="label" for="cl-ramo">Ramo</label>
+            <input class="input" id="cl-ramo" list="cl-ramos" maxlength="40" placeholder="Ex: Confeitaria" value="${esc(c?.ramo || "")}">
+            <datalist id="cl-ramos">${[...new Set([...RAMOS, ...lista.map((x) => x.ramo).filter(Boolean)])].map((n) => `<option value="${esc(n)}">`).join("")}</datalist></div>
+        </div>
+        <div class="dialogo-linha dois-col">
+          <div><label class="label" for="cl-contato">Contato</label><input class="input" id="cl-contato" maxlength="120" placeholder="WhatsApp ou @" value="${esc(c?.contato || "")}"></div>
+          <div><label class="label" for="cl-link">Link do trabalho no ar</label><input class="input" id="cl-link" maxlength="300" placeholder="ex: cliente.com.br" value="${esc(c?.link || "")}"></div>
+        </div>
+        <label class="label" for="cl-entregaveis">O que inclui</label>
+        <input class="input" id="cl-entregaveis" maxlength="200" placeholder="Ex: bio link + 3 páginas + domínio" value="${esc(c?.entregaveis || "")}">
+        <label class="label" for="cl-notas">Observações</label>
+        <textarea class="input" id="cl-notas" rows="3" maxlength="2000" placeholder="Briefing, cores, combinados...">${esc(c?.notas || "")}</textarea>
+        <div class="dialogo-linha dois-col">
+          <label class="switch" style="margin-top:14px"><input type="checkbox" id="cl-pago" ${c?.pago ? "checked" : ""}><span class="track"></span> Pagamento completo</label>
+          <div><label class="label" for="cl-datapag">Data do pagamento final</label><input class="input" id="cl-datapag" type="date" value="${c?.data_pagamento || ""}"></div>
+        </div>
+        <div class="dialogo-acoes">
+          ${c ? `<button class="btn danger" type="button" id="cl-apagar">Apagar</button>` : ""}
+          <span style="flex:1"></span>
+          <button class="btn" type="button" id="cl-cancelar">Cancelar</button>
+          <button class="btn primary" type="submit">Salvar</button>
+        </div>
+      </form>`);
+    d.showModal();
+    $("#cl-nome", d).focus();
+    $$("input[name=cl-servico]", d).forEach((i) => i.addEventListener("change", () =>
+      $$("input[name=cl-servico]", d).forEach((x) => x.parentElement.classList.toggle("on", x.checked))));
+    $("#cl-cancelar", d).addEventListener("click", () => d.close());
+    $("#cl-apagar", d)?.addEventListener("click", async () => {
+      if (!confirm(`Apagar o cliente "${c.nome}"?`)) return;
+      try { await db.apagar(c.id); d.close(); toast("Cliente apagado.", "ok"); abrir(); }
+      catch (e) { console.warn(e); toast("Não consegui apagar.", "err"); }
+    });
+    $("#cli-form", d).addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const pago = $("#cl-pago", d).checked;
+      const entrada = Number($("#cl-entrada", d).value || 0);
+      const row = {
+        ...(c ? { id: c.id } : {}),
+        nome: $("#cl-nome", d).value.trim(),
+        servico: $("input[name=cl-servico]:checked", d).value,
+        valor: Number($("#cl-valor", d).value || 0),
+        entrada,
+        data_entrada: entrada > 0 ? ($("#cl-dataent", d).value || hojeIso()) : null,
+        prazo_entrega: $("#cl-prazo", d).value || null,
+        status: $("#cl-status", d).value,
+        origem: $("#cl-origem", d).value,
+        ramo: $("#cl-ramo", d).value.trim(),
+        contato: $("#cl-contato", d).value.trim(),
+        link: $("#cl-link", d).value.trim(),
+        entregaveis: $("#cl-entregaveis", d).value.trim(),
+        notas: $("#cl-notas", d).value.trim(),
+        pago,
+        data_pagamento: pago ? ($("#cl-datapag", d).value || hojeIso()) : null,
+      };
+      if (!row.nome) return;
+      try { await db.salvar(row); d.close(); toast(c ? "Cliente atualizado." : "Cliente cadastrado.", "ok"); abrir(); }
+      catch (e) { console.warn(e); toast("Não consegui salvar o cliente.", "err"); }
+    });
+  }
+
+  function ligar() {
+    if (ligado) return;
+    ligado = true;
+    $("#cliente-novo").addEventListener("click", () => editar(null));
+  }
+
+  return { abrir, carregar, recebido, falta, servico, SERVICOS };
+})();
+
+// ---------------------------------------------------------------------
+// VISÃO GERAL do negócio: campanhas + clientes, mês e acumulado.
+// ---------------------------------------------------------------------
+window.Negocio = (() => {
+  const COR_CAMP = "#78b4f4";
+  const COR_CLI = "#ff99d9";
+  const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  const dataCriacao = (x) => String(x.created_at || "").slice(0, 10) || hojeIso();
+  let camps = [];
+  let clis = [];
+
+  // Cada dinheiro que entrou, com a data em que entrou.
+  function entradas(campanhas, clientes) {
+    const l = [];
+    campanhas.forEach((c) => {
+      const v = window.Campanhas.dinheiro(c);
+      if (c.pago && v > 0) l.push({ data: c.data_pagamento || dataCriacao(c), valor: v, fonte: "campanha", nome: c.marca });
+    });
+    clientes.forEach((c) => {
+      const total = Number(c.valor || 0);
+      const ent = Math.min(Number(c.entrada || 0), total);
+      if (ent > 0) l.push({ data: c.data_entrada || dataCriacao(c), valor: ent, fonte: "cliente", servico: c.servico, nome: c.nome });
+      if (c.pago && total - ent > 0) l.push({ data: c.data_pagamento || dataCriacao(c), valor: total - ent, fonte: "cliente", servico: c.servico, nome: c.nome });
+    });
+    return l;
+  }
+
+  // Trabalhos fechados (saíram de negociação/orçamento).
+  function fechados() {
+    return [
+      ...camps.filter((c) => c.status !== "negociando").map((c) => ({ data: dataCriacao(c), valor: window.Campanhas.dinheiro(c), permuta: c.tipo_pagamento !== "dinheiro" })),
+      ...clis.filter((c) => c.status !== "orcamento").map((c) => ({ data: dataCriacao(c), valor: Number(c.valor || 0) })),
+    ];
+  }
+
+  function pendencias() {
+    return [
+      ...camps.filter((c) => ["ativa", "entregue"].includes(c.status) && !c.pago && window.Campanhas.dinheiro(c) > 0)
+        .map((c) => ({ nome: c.marca, tipo: "Campanha", valor: window.Campanhas.dinheiro(c), prazo: c.prazo_entrega })),
+      ...clis.filter((c) => window.Clientes.falta(c) > 0)
+        .map((c) => ({ nome: c.nome, tipo: window.Clientes.servico(c.servico).nome, valor: window.Clientes.falta(c), prazo: c.prazo_entrega })),
+    ].sort((a, b) => (a.prazo || "9999").localeCompare(b.prazo || "9999"));
+  }
+
+  async function abrir() {
+    $("#negocio-conteudo").innerHTML = `<p class="sub">Carregando...</p>`;
+    [camps, clis] = await Promise.all([window.Campanhas.carregar(), window.Clientes.carregar()]);
+    render();
+  }
+
+  const soma = (l) => l.reduce((t, e) => t + e.valor, 0);
+  const mesDe = (iso) => iso.slice(0, 7);
+  function mesAnterior(ym) { const [a, m] = ym.split("-").map(Number); return m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, "0")}`; }
+
+  function render() {
+    const ent = entradas(camps, clis);
+    const mes = hojeIso().slice(0, 7);
+    const doMes = ent.filter((e) => mesDe(e.data) === mes);
+    const doAnt = ent.filter((e) => mesDe(e.data) === mesAnterior(mes));
+    const recMes = soma(doMes), recAnt = soma(doAnt), recTudo = soma(ent);
+    const fech = fechados();
+    const fechMes = fech.filter((f) => mesDe(f.data) === mes);
+    const comValor = fech.filter((f) => f.valor > 0);
+    const pend = pendencias();
+    const primeiro = ent.map((e) => e.data).sort()[0];
+    const variacao = recAnt > 0 ? Math.round(((recMes - recAnt) / recAnt) * 100) : null;
+    const [, mm] = mes.split("-").map(Number);
+
+    $("#negocio-conteudo").innerHTML = `
+      <div class="grid tons">
+        <div class="tom rosa"><span>Recebido em ${MESES_LONGOS[mm - 1]}</span><b class="valor">${reais(recMes)}</b>
+          <small>${variacao === null ? "primeiro mês com comparação" : `${variacao >= 0 ? "+" : ""}${variacao}% em relação ao mês passado`}</small></div>
+        <div class="tom amarelo"><span>Recebido até hoje</span><b class="valor">${reais(recTudo)}</b>
+          <small>${primeiro ? `desde ${diaMes(primeiro)} ${primeiro.slice(0, 4)}` : "nada recebido ainda"}</small></div>
+        <div class="tom azul"><span>A receber</span><b class="valor">${reais(soma(pend))}</b><small>${pend.length} trabalho(s) com saldo aberto</small></div>
+        <div class="tom creme"><span>Fechado no mês</span><b class="valor">${reais(soma(fechMes))}</b><small>${fechMes.length} trabalho(s) novo(s) em ${MESES_LONGOS[mm - 1]}</small></div>
+        <div class="tom rosa"><span>Ticket médio</span><b class="valor">${reais(comValor.length ? soma(comValor) / comValor.length : 0)}</b><small>${fech.length} trabalho(s) fechado(s) até hoje</small></div>
+      </div>
+      <div class="grid dois">
+        <div class="card"><h2>${icon("money")} Este mês</h2>${divisao(doMes, recMes)}</div>
+        <div class="card"><h2>${icon("trophy")} Até hoje</h2>${divisao(ent, recTudo)}</div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="mini-topo"><h2>${icon("chart")} Recebido por mês</h2>
+          <div class="neg-legenda"><span><i style="background:${COR_CLI}"></i>Clientes (sites)</span><span><i style="background:${COR_CAMP}"></i>Campanhas</span></div></div>
+        ${grafico(ent)}
+      </div>
+      <div class="grid dois" style="margin-top:12px">
+        <div class="card"><div class="mini-topo"><h2>${icon("clock")} Falta receber</h2></div>${listaPend(pend)}</div>
+        <div class="card"><div class="mini-topo"><h2>${icon("file")} Mês a mês</h2></div>${tabelaMeses(ent)}</div>
+      </div>`;
+    $$("[data-go-neg]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.goNeg)));
+  }
+
+  // Quanto veio de cada fonte: campanhas e cada serviço de site.
+  function divisao(l, total) {
+    if (!total) return `<div class="soft-box" style="margin-top:12px">Nenhum valor recebido nesse período. Marque como pago nas Campanhas e nos Clientes.</div>`;
+    const linhas = [
+      { nome: "Campanhas", cor: COR_CAMP, v: soma(l.filter((e) => e.fonte === "campanha")) },
+      ...window.Clientes.SERVICOS.map((s) => ({ nome: s.nome, cor: s.cor, v: soma(l.filter((e) => e.fonte === "cliente" && (e.servico || "outro") === s.id)) })),
+    ].filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+    const max = linhas[0].v;
+    return `<ol class="retorno">${linhas.map((x) => `
+      <li><span class="nome">${x.nome}</span><span class="barra"><i style="width:${Math.max(4, (x.v / max) * 100)}%;background:${x.cor}"></i></span><b class="valor">${reais(x.v)}</b></li>`).join("")}</ol>
+      <p class="hint">${linhas.map((x) => `${x.nome}: ${Math.round((x.v / total) * 100)}%`).join(" · ")}</p>`;
+  }
+
+  // Últimos 12 meses (ou desde o primeiro recebimento), empilhado.
+  function meses(ent) {
+    const atual = hojeIso().slice(0, 7);
+    const lista = [atual];
+    while (lista.length < 12) lista.unshift(mesAnterior(lista[0]));
+    const primeiro = ent.map((e) => mesDe(e.data)).sort()[0];
+    const corte = primeiro && primeiro > lista[0] ? lista.indexOf(primeiro) : 0;
+    return lista.slice(Math.min(corte, 6)).map((ym) => {
+      const doMes = ent.filter((e) => mesDe(e.data) === ym);
+      return { ym, camp: soma(doMes.filter((e) => e.fonte === "campanha")), cli: soma(doMes.filter((e) => e.fonte === "cliente")) };
+    });
+  }
+  const nomeMes = (ym, longo) => { const [a, m] = ym.split("-").map(Number); return longo ? `${MESES_LONGOS[m - 1]} ${a}` : MESES_CURTOS[m - 1]; };
+
+  function grafico(ent) {
+    const ms = meses(ent);
+    const max = Math.max(...ms.map((m) => m.camp + m.cli));
+    if (!max) return `<div class="soft-box" style="margin-top:12px">O gráfico aparece quando entrar o primeiro pagamento.</div>`;
+    return `<div class="neg-grafico" role="img" aria-label="Recebido por mês, separado entre clientes e campanhas">
+      ${ms.map((m) => {
+        const tot = m.camp + m.cli;
+        return `<div class="neg-col" tabindex="0" aria-label="${nomeMes(m.ym, true)}: ${reais(tot)}">
+          <div class="neg-tt"><b>${nomeMes(m.ym, true)}</b><span><i style="background:${COR_CLI}"></i>Clientes <b class="valor">${reais(m.cli)}</b></span>
+            <span><i style="background:${COR_CAMP}"></i>Campanhas <b class="valor">${reais(m.camp)}</b></span><span>Total <b class="valor">${reais(tot)}</b></span></div>
+          <div class="neg-pilha" style="height:${(tot / max) * 100}%">
+            ${m.cli ? `<i style="flex:${m.cli};background:${COR_CLI}"></i>` : ""}${m.camp ? `<i style="flex:${m.camp};background:${COR_CAMP}"></i>` : ""}
+          </div>
+          <span class="neg-mes">${nomeMes(m.ym)}</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }
+
+  function listaPend(pend) {
+    if (!pend.length) return `<p class="vazio-nota">Tudo recebido por enquanto.</p>`;
+    return `<ul class="prazos">${pend.slice(0, 8).map((p) => `
+      <li class="${p.prazo && p.prazo < hojeIso() ? "atraso" : ""}"><span>${esc(p.nome)} <span class="muted">· ${esc(p.tipo)}${p.prazo ? ` · ${diaMes(p.prazo)}` : ""}</span></span><b class="valor">${reais(p.valor)}</b></li>`).join("")}</ul>
+      ${pend.length > 8 ? `<p class="hint">e mais ${pend.length - 8}.</p>` : ""}
+      <p class="hint"><button class="btn link" data-go-neg="campanhas">ver campanhas</button> · <button class="btn link" data-go-neg="clientes">ver clientes</button></p>`;
+  }
+
+  function tabelaMeses(ent) {
+    const ms = meses(ent).filter((m) => m.camp + m.cli).reverse();
+    if (!ms.length) return `<p class="vazio-nota">Os meses aparecem aqui quando entrar o primeiro pagamento.</p>`;
+    return `<div class="table-wrap"><table class="leads-table">
+      <thead><tr><th scope="col">Mês</th><th scope="col" style="text-align:right">Clientes</th><th scope="col" style="text-align:right">Campanhas</th><th scope="col" style="text-align:right">Total</th></tr></thead>
+      <tbody>${ms.map((m) => `<tr><td>${nomeMes(m.ym, true)}</td><td class="num"><span class="valor">${reais(m.cli)}</span></td>
+        <td class="num"><span class="valor">${reais(m.camp)}</span></td><td class="num"><b class="valor">${reais(m.camp + m.cli)}</b></td></tr>`).join("")}</tbody></table></div>`;
+  }
+
+  return { abrir, entradas };
 })();
 
 // ---------------------------------------------------------------------

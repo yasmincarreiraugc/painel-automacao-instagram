@@ -380,6 +380,7 @@ window.Estrategia = (() => {
     const corPilar = (nome) => CORES_PILAR[Math.max(0, (est?.pilares || []).findIndex((p) => p.nome === nome)) % CORES_PILAR.length];
     const semana = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
     box.innerHTML = `
+      ${est?.calendario?.length ? semanaCalendario(est.calendario, corPilar, semana) : ""}
       <div class="estr">
         <div class="estr-main">
           ${montando ? carregandoIA(montando) : ""}
@@ -402,26 +403,7 @@ window.Estrategia = (() => {
             <ol class="plano">${(est.plano || []).map((p) => `<li><b>${esc(p.etapa)}</b><p>${esc(p.como)}</p></li>`).join("")}</ol>
             ${(est.estilo || []).length ? `
               <h2 class="secao">O jeito de gravar</h2>
-              <div class="estilo">${est.estilo.map((e) => `<div><b>${esc(e.regra)}</b><p>${esc(e.como)}</p></div>`).join("")}</div>` : ""}
-            <div class="secao-linha"><h2 class="secao">Calendário de conteúdo</h2>
-              <span class="nota-auto">${icon("refresh")} Atualizado toda segunda com base no que você postou</span></div>
-            ${semanasHtml(est.calendario || [], (d) => `
-              <article class="dia30 ${feitos[chaveDia(d)] ? "feito" : ""}" data-dia="${d.dia}">
-                <div class="dia30-topo"><span class="dia30-n"><b>${d.dia}</b>${d.data ? `${esc(semana(d.data))} ${esc(d.data.slice(8, 10))}/${esc(d.data.slice(5, 7))}` : ""}</span>
-                  <span class="fmt ${CORES_FORMATO[d.formato] || ""}">${esc(d.formato)}</span></div>
-                <span class="dia30-pilar"><i style="background:${corPilar(d.pilar)}"></i>${esc(d.pilar)}</span>
-                <h3>${esc(d.tema)}</h3>
-                <p>${esc(d.ideia)}</p>
-                ${d.gancho ? `<p class="gancho">"${esc(d.gancho)}"</p>` : ""}
-                <details><summary>Stories e legenda</summary>
-                  <ul>${(d.stories || []).map((s) => `<li>${esc(s)}</li>`).join("")}</ul>
-                  ${d.legenda_cta ? `<p><b>Legenda/CTA:</b> ${esc(d.legenda_cta)}</p>` : ""}
-                </details>
-                <div class="dia30-acoes">
-                  <button class="btn sm feito-btn ${feitos[chaveDia(d)] ? "on" : ""}" data-feito="${d.dia}" aria-pressed="${!!feitos[chaveDia(d)]}">
-                    ${icon("check")} ${feitos[chaveDia(d)] ? "Conteúdo feito" : "Marcar como feito"}</button>
-                </div>
-              </article>`)}`}
+              <div class="estilo">${est.estilo.map((e) => `<div><b>${esc(e.regra)}</b><p>${esc(e.como)}</p></div>`).join("")}</div>` : ""}`}
         </div>
         <aside class="card estr-chat">
           <h2>${icon("chat")} Converse com o Claude</h2>
@@ -441,6 +423,7 @@ window.Estrategia = (() => {
     $("#estr-montar")?.addEventListener("click", () => montar($("#estr-pedido").value.trim()));
     $("#chat-form").addEventListener("submit", (ev) => { ev.preventDefault(); enviar(); });
     $("#chat-texto").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); enviar(); } });
+    $$("[data-semana-ir]", box).forEach((b) => b.addEventListener("click", () => { semanaVista += Number(b.dataset.semanaIr); render(); }));
     $$("[data-feito]", box).forEach((b) => b.addEventListener("click", async () => {
       const d = est.calendario.find((x) => String(x.dia) === b.dataset.feito);
       const k = chaveDia(d);
@@ -454,29 +437,55 @@ window.Estrategia = (() => {
   // "Feito" fica guardado à parte (a rotina de segunda reescreve o calendário).
   const chaveDia = (d) => `${d.data}|${d.tema}`;
 
-  // Calendário agrupado por semana (usa "semana" do dia ou calcula de 7 em 7),
-  // com o título, o foco e a meta de cada semana quando existirem.
-  function semanasHtml(dias, cartao) {
+  // Quadro semanal no topo: uma semana por vez, os dias lado a lado como
+  // num calendário. Abre na semana de hoje; as setas trocam de semana.
+  let semanaVista = null;
+  function semanaCalendario(dias, corPilar, diaSemana) {
     const grupos = new Map();
     dias.forEach((d) => {
       const n = d.semana || Math.ceil(d.dia / 7);
       if (!grupos.has(n)) grupos.set(n, []);
       grupos.get(n).push(d);
     });
-    return [...grupos.entries()].sort((a, b) => a[0] - b[0]).map(([n, ds]) => {
-      const info = (est.semanas || []).find((s) => s.numero === n);
-      const ini = ds[0]?.data, fim = ds[ds.length - 1]?.data;
-      const periodo = ini && fim ? `${ini.slice(8, 10)}/${ini.slice(5, 7)} a ${fim.slice(8, 10)}/${fim.slice(5, 7)}` : "";
-      return `
-        <section class="semana">
-          <header class="semana-topo">
-            <span class="semana-n">Semana ${n}</span>
-            <div><h3>${esc(info?.titulo || "")}</h3>${info?.foco ? `<p>${esc(info.foco)}</p>` : ""}</div>
-            <div class="semana-lado"><small>${esc(periodo)}</small><b class="semana-feitos">${ds.filter((d) => feitos[chaveDia(d)]).length} de ${ds.length} feitos</b>${info?.meta ? `<span>${esc(info.meta)}</span>` : ""}</div>
-          </header>
-          <div class="calendario30">${ds.map(cartao).join("")}</div>
-        </section>`;
-    }).join("");
+    const nums = [...grupos.keys()].sort((a, b) => a - b);
+    const hoje = hojeIso();
+    if (semanaVista === null) semanaVista = Math.max(0, nums.findIndex((n) => grupos.get(n).some((d) => d.data === hoje)));
+    semanaVista = Math.min(Math.max(semanaVista, 0), nums.length - 1);
+    const n = nums[semanaVista];
+    const ds = grupos.get(n);
+    const info = (est.semanas || []).find((s) => s.numero === n);
+    const ini = ds[0]?.data, fim = ds[ds.length - 1]?.data;
+    const periodo = ini && fim ? `${ini.slice(8, 10)}/${ini.slice(5, 7)} a ${fim.slice(8, 10)}/${fim.slice(5, 7)}` : "";
+    return `
+      <section class="semana semana-quadro">
+        <header class="semana-topo">
+          <div class="semana-nav">
+            <button class="icon-btn" data-semana-ir="-1" aria-label="Semana anterior" ${semanaVista === 0 ? "disabled" : ""}>${icon("chevron-left")}</button>
+            <span class="semana-n">Semana ${n} de ${nums.length}</span>
+            <button class="icon-btn" data-semana-ir="1" aria-label="Próxima semana" ${semanaVista === nums.length - 1 ? "disabled" : ""}>${icon("chevron-right")}</button>
+          </div>
+          <div><h3>${esc(info?.titulo || "Calendário de conteúdo")}</h3>${info?.foco ? `<p>${esc(info.foco)}</p>` : ""}</div>
+          <div class="semana-lado"><small>${esc(periodo)}</small><b class="semana-feitos">${ds.filter((d) => feitos[chaveDia(d)]).length} de ${ds.length} feitos</b>${info?.meta ? `<span>${esc(info.meta)}</span>` : ""}</div>
+        </header>
+        <div class="semana-dias">${ds.map((d) => `
+          <article class="dia30 ${feitos[chaveDia(d)] ? "feito" : ""} ${d.data === hoje ? "hoje" : ""}" data-dia="${d.dia}">
+            <div class="dia30-cab"><span>${d.data ? esc(diaSemana(d.data)) : ""}</span><b>${d.data ? esc(d.data.slice(8, 10)) : d.dia}</b>${d.data === hoje ? `<em>hoje</em>` : ""}</div>
+            <span class="fmt ${CORES_FORMATO[d.formato] || ""}">${esc(d.formato)}</span>
+            <span class="dia30-pilar"><i style="background:${corPilar(d.pilar)}"></i>${esc(d.pilar)}</span>
+            <h3>${esc(d.tema)}</h3>
+            ${d.gancho ? `<p class="gancho">"${esc(d.gancho)}"</p>` : ""}
+            <details><summary>Como gravar</summary>
+              <p>${esc(d.ideia)}</p>
+              ${d.legenda_cta ? `<p><b>Legenda/CTA:</b> ${esc(d.legenda_cta)}</p>` : ""}
+              ${(d.stories || []).length ? `<p><b>Stories:</b></p><ul>${d.stories.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+            </details>
+            <div class="dia30-acoes">
+              <button class="btn sm feito-btn ${feitos[chaveDia(d)] ? "on" : ""}" data-feito="${d.dia}" aria-pressed="${!!feitos[chaveDia(d)]}">
+                ${icon("check")} ${feitos[chaveDia(d)] ? "Feito" : "Marcar feito"}</button>
+            </div>
+          </article>`).join("")}</div>
+        <p class="nota-auto">${icon("refresh")} Atualizado toda segunda com base no que você postou</p>
+      </section>`;
   }
 
   async function montar(pedido) {

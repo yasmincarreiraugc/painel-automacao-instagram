@@ -239,7 +239,7 @@ function entrarApp(email) {
   irPara(location.hash.replace("#", "") || "inicio");
 }
 
-const PAGINAS = ["inicio", "calendario", "roteiros", "campanhas", "analista", "instagram", "quadros", "emalta",
+const PAGINAS = ["inicio", "calendario", "roteiros", "negocio", "campanhas", "clientes", "analista", "instagram", "quadros", "emalta",
   "estrategia", "criarposts", "criarvideos", "site", "portfolio"];
 function irPara(pagina) {
   if (!PAGINAS.includes(pagina)) pagina = "inicio";
@@ -251,7 +251,9 @@ function irPara(pagina) {
   if (pagina === "inicio") window.Inicio?.abrir();
   if (pagina === "calendario") window.Agenda?.abrir();
   if (pagina === "roteiros") window.Roteiros?.abrir();
+  if (pagina === "negocio") window.Negocio?.abrir();
   if (pagina === "campanhas") window.Campanhas?.abrir();
+  if (pagina === "clientes") window.Clientes?.abrir();
   if (pagina === "portfolio") window.Portfolio?.abrir();
   if (pagina === "analista") window.Analista?.abrir();
   if (pagina === "quadros") window.Quadros?.abrir();

@@ -34,16 +34,17 @@ window.Inicio = (() => {
     esqueleto();
 
     const seguro = (p) => p.catch((e) => { console.warn(e); return null; });
-    const [tarefas, roteiros, campanhas, ig30, ig90, site, meta] = await Promise.all([
+    const [tarefas, roteiros, campanhas, clientes, ig30, ig90, site, meta] = await Promise.all([
       seguro(window.Agenda.listar(hoje, somaDias(hoje, 7))),
       seguro(tabela("roteiros", "updated_at").listar()),
       seguro(window.Campanhas.carregar()),
+      seguro(window.Clientes.carregar()),
       seguro(api.funcao("ig-analytics", { periodo: "30" })),
       seguro(api.funcao("ig-analytics", { periodo: "90" })),
       sb ? seguro(sb.rpc("site_resumo", { p_dias: 30 }).then((r) => r.data)) : null,
       seguro(config.ler("meta_seguidores")),
     ]);
-    d = { hoje, tarefas: tarefas || [], roteiros: roteiros || [], campanhas: campanhas || [], ig30, ig90, site, meta };
+    d = { hoje, tarefas: tarefas || [], roteiros: roteiros || [], campanhas: campanhas || [], clientes: clientes || [], ig30, ig90, site, meta };
     render();
   }
 
@@ -84,6 +85,8 @@ window.Inicio = (() => {
 
     // Trio: prazos, último post, dinheiro.
     const r = window.Campanhas.resumo(d.campanhas);
+    const cliAberto = d.clientes.filter((c) => window.Clientes.falta(c) > 0);
+    const recebidoMes = window.Negocio.entradas(d.campanhas, d.clientes).filter((e) => e.data.startsWith(hoje.slice(0, 7))).reduce((t, e) => t + e.valor, 0);
     const prazos = [...r.atrasadas, ...r.proximas].slice(0, 4);
     const post = d.ig90?.connected ? [...(d.ig90.posts || [])].sort((a, b) => b.data.localeCompare(a.data))[0] : null;
     $("#in-trio").innerHTML = `
@@ -105,12 +108,12 @@ window.Inicio = (() => {
           : `<p class="vazio-nota">${d.ig90?.connected ? "Nenhum post nos últimos 90 dias." : "Conecte o Instagram pra ver o último post."}</p>`}
       </div>
       <div class="card mini">
-        <div class="mini-topo"><h2>${icon("money")} Dinheiro</h2><button class="btn link" data-go-to="campanhas">detalhes</button></div>
+        <div class="mini-topo"><h2>${icon("money")} Dinheiro</h2><button class="btn link" data-go-to="negocio">detalhes</button></div>
         <div class="dinheiro">
-          <div><span>A receber</span><b class="valor">${reais(r.aReceber)}</b></div>
-          <div><span>Recebido no mês</span><b class="valor">${reais(r.recebidoMes)}</b></div>
+          <div><span>A receber</span><b class="valor">${reais(r.aReceber + cliAberto.reduce((t, c) => t + window.Clientes.falta(c), 0))}</b></div>
+          <div><span>Recebido no mês</span><b class="valor">${reais(recebidoMes)}</b></div>
         </div>
-        <p class="vazio-nota">${r.nAReceber ? `${r.nAReceber} campanha(s) esperando pagamento.` : "Tudo recebido por enquanto."}</p>
+        <p class="vazio-nota">${r.nAReceber + cliAberto.length ? `${r.nAReceber + cliAberto.length} trabalho(s) esperando pagamento.` : "Tudo recebido por enquanto."}</p>
       </div>`;
 
     // Dupla: o que fazer hoje e o que vem aí.

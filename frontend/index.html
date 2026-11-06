@@ -68,7 +68,9 @@
       <button data-page="roteiros"><span data-icon="file"></span> Roteiros</button>
 
       <p class="nav-grupo">Negócio</p>
+      <button data-page="negocio"><span data-icon="chart"></span> Visão geral</button>
       <button data-page="campanhas"><span data-icon="briefcase"></span> Campanhas</button>
+      <button data-page="clientes"><span data-icon="users"></span> Clientes</button>
       <button data-page="analista"><span data-icon="search"></span> Analista</button>
 
       <p class="nav-grupo">Conteúdo</p>
@@ -120,6 +122,18 @@
       <div id="roteiros-conteudo"></div>
     </section>
 
+    <!-- Visão geral do negócio -->
+    <section data-section="negocio" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Seu negócio</p>
+          <h1 class="titulo-grande">Visão <mark class="azul">geral</mark></h1>
+          <p class="sub">Tudo que entrou e o que falta entrar, somando campanhas e clientes.</p>
+        </div>
+      </div>
+      <div id="negocio-conteudo"></div>
+    </section>
+
     <!-- Campanhas -->
     <section data-section="campanhas" hidden>
       <div class="page-head">
@@ -131,6 +145,19 @@
         <button class="btn primary" id="campanha-nova"><span data-icon="plus"></span> Nova campanha</button>
       </div>
       <div id="campanhas-conteudo"></div>
+    </section>
+
+    <!-- Clientes (bio links, portfólios e sites) -->
+    <section data-section="clientes" hidden>
+      <div class="page-head">
+        <div>
+          <p class="sobretitulo">Bio links, portfólios e sites</p>
+          <h1 class="titulo-grande">Seus <mark>clientes</mark></h1>
+          <p class="sub">Serviço, valor, entrada, prazo e pagamento de cada cliente.</p>
+        </div>
+        <button class="btn primary" id="cliente-novo"><span data-icon="plus"></span> Novo cliente</button>
+      </div>
+      <div id="clientes-conteudo"></div>
     </section>
 
     <!-- Páginas que ainda vão ganhar conteúdo -->

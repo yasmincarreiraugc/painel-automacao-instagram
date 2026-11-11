@@ -2,6 +2,8 @@
 // ig-scheduler: o carteiro. Roda a cada 1 minuto (pg_cron).
 //   1) Esvazia a fila do freio (ig_send_queue).
 //   2) Manda os passos com atraso que já venceram (ig_scheduled).
+//   3) A cada 3 minutos, pede ao instagram-webhook a varredura dos
+//      comentários que o Instagram não avisou.
 // Protegido pelo header x-sched-key = SCHED_SECRET.
 // Publique com  --no-verify-jwt  (quem protege é o SCHED_SECRET).
 // =====================================================================
@@ -95,5 +97,16 @@ Deno.serve(async (req) => {
   // Faxina: apaga o "já processei" com mais de 7 dias.
   await db.from("ig_processed_events").delete().lt("ts", new Date(Date.now() - VALIDADE_COMENTARIO_MS).toISOString());
 
-  return json(resumo);
+  // 3) A cada 3 minutos: varredura dos comentários que o Instagram não avisou.
+  let varredura: unknown = null;
+  if (new Date().getMinutes() % 3 === 0) {
+    try {
+      const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/instagram-webhook?varrer=1`, {
+        method: "POST", headers: { "x-sched-key": Deno.env.get("SCHED_SECRET") ?? "" },
+      });
+      varredura = await res.json().catch(() => res.status);
+    } catch (e) { console.warn("varredura:", e); }
+  }
+
+  return json({ ...resumo, varredura });
 });

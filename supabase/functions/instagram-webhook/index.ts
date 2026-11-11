@@ -7,8 +7,8 @@
 // No Meta, assine os campos: comments, messages, messaging_postbacks.
 // =====================================================================
 import {
-  afterStep, db, escolheRespostaPublica, findStep, firstStep, IG_ACCOUNT_ID, logDelivery,
-  marcaProcessado, replyComment, sendMessage, sendStep, tipoDoPasso,
+  afterStep, db, escolheRespostaPublica, findStep, firstStep, IG_ACCOUNT_ID, igGet, json, logDelivery,
+  marcaProcessado, replyComment, schedAutorizado, sendMessage, sendStep, tipoDoPasso,
 } from "../_shared/ig.ts";
 
 const VERIFY_TOKEN = Deno.env.get("VERIFY_TOKEN") ?? "";
@@ -31,6 +31,14 @@ Deno.serve(async (req) => {
     return new Response("Token de verificação inválido", { status: 403 });
   }
   if (req.method !== "POST") return new Response("ok");
+
+  // Varredura (chamada pelo ig-scheduler): o Instagram às vezes não avisa
+  // um comentário. Aqui a gente busca os comentários recentes dos posts
+  // com automação e processa os que faltaram (o anti-duplicado evita repetir).
+  if (url.searchParams.get("varrer") === "1") {
+    if (!schedAutorizado(req)) return new Response("não autorizado", { status: 401 });
+    return json(await varreComentarios());
+  }
 
   // -------------------------------------------------------------------
   // b) Recebimento (POST): confere a assinatura.
@@ -78,6 +86,37 @@ async function assinaturaValida(raw: string, header: string | null) {
 
 // Normaliza texto: minúsculas e sem acento ("Quéro" = "quero").
 const normaliza = (t: string) => (t ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+
+// =====================================================================
+// VARREDURA: comentários das últimas 6 horas nos posts com automação.
+// Posts escolhidos nas automações + os 5 mais recentes (pras automações
+// que valem pra todos os posts). Cada post gasta 1 chamada da API.
+// =====================================================================
+const JANELA_VARREDURA_MS = 6 * 3600 * 1000;
+
+async function varreComentarios() {
+  const { data: autos } = await db.from("ig_automations").select("media_ids").eq("active", true);
+  if (!autos?.length) return { posts: 0, conferidos: 0 };
+  const posts = new Set<string>(autos.flatMap((a: any) => a.media_ids ?? []));
+  if (autos.some((a: any) => !(a.media_ids ?? []).length)) {
+    const r = await igGet(`/${IG_ACCOUNT_ID || "me"}/media?fields=id&limit=5`);
+    for (const m of r.ok ? r.data?.data ?? [] : []) posts.add(m.id);
+  }
+  const desde = Date.now() - JANELA_VARREDURA_MS;
+  let conferidos = 0;
+  for (const mediaId of [...posts].slice(0, 15)) {
+    const r = await igGet(`/${mediaId}/comments?fields=id,text,timestamp,from{id,username}&limit=50`);
+    if (!r.ok) { console.warn("varredura:", mediaId, r.error); continue; }
+    for (const c of r.data?.data ?? []) {
+      if (!c.from?.id || new Date(c.timestamp).getTime() < desde) continue;
+      try {
+        await handleComment({ id: c.id, text: c.text, from: c.from, media: { id: mediaId } });
+        conferidos++;
+      } catch (e) { console.error("varredura, erro no comentário:", e); }
+    }
+  }
+  return { posts: posts.size, conferidos };
+}
 
 // =====================================================================
 // COMENTÁRIO

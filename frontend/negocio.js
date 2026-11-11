@@ -1072,7 +1072,7 @@ window.Roteiros = (() => {
     const d = janela("rot-link", `
       <div class="rot-form">
         <h2>Link pra ${esc(marca || "marca")}</h2>
-        <p class="sub">Manda esse link pra marca. Quando ela escolher o gancho, comentar ou aprovar, aparece aqui no card e chega no seu e-mail.</p>
+        <p class="sub">Copie o link e mande pra marca do jeito que preferir. Quando ela escolher o gancho, comentar ou aprovar, aparece aqui no card do roteiro.</p>
         <div class="ro-ref"><input class="input" id="rl-link" readonly value="${esc(link)}" aria-label="Link do roteiro">
           <button class="btn sm" type="button" id="rl-copiar">${icon("link")} Copiar</button></div>
         <div class="dialogo-acoes">

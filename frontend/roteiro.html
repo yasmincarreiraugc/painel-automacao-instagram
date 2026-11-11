@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Roteiro para aprovação</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -3 46 46'%3E%3Cpath d='M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z' fill='%23ff99d9' stroke='%231e1915' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap">
+  <style>
+    :root {
+      --bg: #f5f2ed; --surface: #fff; --text: #1e1915; --muted: #6f6964; --border: #e7e2de;
+      --rosa: #ff99d9; --rosa-claro: #ffd9f0; --manteiga: #fff2c2; --azul-claro: #d9eafd; --creme: #ebe5dc;
+      --ok: #1f6b2c; --ok-soft: #dff3dc; --err: #b42318;
+      --titulo: "Barlow Condensed", "Arial Narrow", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 Montserrat, system-ui, sans-serif; }
+    .pag { max-width: 760px; margin: 0 auto; padding: 20px 16px 120px; }
+    .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 2px solid var(--text); }
+    .assina { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: .08em; font-size: 11px; line-height: 1.15; }
+    .assina svg { width: 24px; height: 24px; fill: var(--rosa); stroke: var(--text); stroke-width: 2.4; stroke-linejoin: round; overflow: visible; flex: none; }
+    .doc { font-size: 12px; color: var(--muted); text-align: right; }
+    .cabeca { display: flex; align-items: center; gap: 16px; margin: 26px 0 8px; }
+    .logo { width: 64px; height: 64px; border-radius: 16px; background: var(--surface); object-fit: contain; padding: 6px; box-shadow: 0 6px 18px -10px rgba(30,25,21,.25); flex: none; }
+    .logo-letra { display: grid; place-items: center; font: 700 30px var(--titulo); background: var(--manteiga); padding: 0; }
+    .marca { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+    h1 { font: 700 clamp(30px, 7vw, 42px)/1.02 var(--titulo); margin: 2px 0 0; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; }
+    .chip { background: var(--surface); border-radius: 99px; padding: 3px 12px; font-size: 12.5px; font-weight: 500; }
+    .passos { background: var(--surface); border-radius: 18px; padding: 14px 18px; margin: 22px 0 0; font-size: 14px; }
+    .passos ol { margin: 6px 0 0; padding-left: 20px; }
+    h2 { font: 700 24px/1.1 var(--titulo); margin: 34px 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 14px; font-size: 14px; }
+    .ganchos { display: grid; gap: 10px; }
+    .gancho { all: unset; box-sizing: border-box; display: block; background: var(--surface); border: 2px solid transparent; border-radius: 18px; padding: 14px 16px 14px 52px; position: relative; cursor: pointer; transition: border-color .15s, background .15s; }
+    .gancho:hover { border-color: var(--border); }
+    .gancho:focus-visible { outline: 3px solid var(--rosa); outline-offset: 2px; }
+    .gancho::before { content: ""; position: absolute; left: 16px; top: 16px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--text); background: var(--surface); }
+    .gancho.on { border-color: var(--text); background: var(--manteiga); }
+    .gancho.on::before { background: var(--text); box-shadow: inset 0 0 0 4px var(--manteiga); }
+    .gancho b { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .gancho span { display: block; font-weight: 500; font-size: 16px; white-space: pre-wrap; }
+    .gancho[disabled] { cursor: default; }
+    .cena { background: var(--surface); border-radius: 18px; padding: 16px 18px; margin-bottom: 12px; }
+    .cena-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .parte { font: 700 20px/1.1 var(--titulo); display: flex; align-items: center; gap: 8px; }
+    .parte i { font-style: normal; width: 28px; height: 28px; border-radius: 50%; background: var(--rosa-claro); display: grid; place-items: center; font-size: 15px; }
+    .colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .bloco { border-radius: 12px; padding: 10px 12px; background: var(--bg); }
+    .bloco.audio { background: var(--manteiga); }
+    .bloco.imagem { background: var(--azul-claro); }
+    .bloco small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+    .bloco p { margin: 0; white-space: pre-wrap; }
+    .ref-foto { display: block; margin-top: 10px; width: 100%; max-height: 420px; object-fit: contain; border-radius: 12px; background: var(--bg); }
+    .btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 99px; padding: 9px 16px; font-weight: 600; font-size: 14px; cursor: pointer; background: var(--bg); color: var(--text); text-decoration: none; }
+    .btn:hover { background: var(--creme); }
+    .btn:focus-visible { outline: 3px solid var(--rosa); outline-offset: 2px; }
+    .btn.escuro { background: var(--text); color: #fff; }
+    .btn.escuro:hover { background: #000; }
+    .btn svg { width: 18px; height: 18px; flex: none; }
+    .btn.peq { padding: 6px 12px; font-size: 13px; }
+    .btn[disabled] { opacity: .5; cursor: default; }
+    .ref-btn { margin-top: 10px; }
+    .coments { margin-top: 12px; display: grid; gap: 8px; }
+    .coment { background: var(--rosa-claro); border-radius: 12px 12px 12px 4px; padding: 8px 12px; font-size: 14px; }
+    .coment b { font-size: 12px; }
+    .coment p { margin: 2px 0 0; white-space: pre-wrap; }
+    .form-coment { margin-top: 10px; display: grid; gap: 8px; }
+    textarea, input { font: inherit; color: inherit; width: 100%; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 12px; background: var(--surface); }
+    textarea { min-height: 84px; resize: vertical; }
+    textarea:focus, input:focus { outline: none; border-color: var(--text); }
+    .form-acoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    .cta { background: var(--text); color: #fff; border-radius: 18px; padding: 16px 18px; font-weight: 500; white-space: pre-wrap; }
+    .aprova { background: var(--surface); border: 2px solid var(--text); border-radius: 22px; padding: 18px; margin-top: 34px; }
+    .aprova h2 { margin-top: 0; }
+    .aprova label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+    .aprova .btn { margin-top: 14px; width: 100%; padding: 13px; font-size: 15px; }
+    .aviso { font-size: 13px; color: var(--err); margin: 8px 0 0; }
+    .aprovado { background: var(--ok-soft); color: var(--ok); border-radius: 18px; padding: 14px 18px; font-weight: 600; display: flex; gap: 10px; align-items: center; margin-top: 22px; }
+    .aprovado svg { width: 22px; height: 22px; flex: none; }
+    .rodape { text-align: center; font-size: 12px; color: var(--muted); margin-top: 36px; }
+    .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 18px; border-radius: 99px; font-size: 14px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,.2); max-width: calc(100% - 32px); text-align: center; }
+    .toast[hidden] { display: none; }
+    .vazio { text-align: center; padding: 80px 10px; }
+    @media (max-width: 560px) {
+      .colunas { grid-template-columns: 1fr; }
+      .doc { display: none; }
+      .cena { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="pag" id="app"><p class="vazio">Carregando o roteiro...</p></main>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+const API = "https://kiajlqrkyfnkwwkomwyw.supabase.co/functions/v1/roteiro-cliente";
+const TOKEN = new URLSearchParams(location.search).get("t") || "";
+const ESTRELA = '<svg viewBox="-3 -3 46 46" aria-hidden="true"><path d="M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>';
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const dataBr = (iso) => new Date(iso).toLocaleDateString("pt-BR");
+const ehFoto = (u) => /\.(png|jpe?g|webp|gif|avif)(\?|#|$)/i.test(u) || /\/storage\/v1\/object\/public\//.test(u);
+const ehLink = (u) => /^https?:\/\//i.test(u);
+const nomeSalvo = { get() { try { return localStorage.getItem("rot_nome") || ""; } catch { return ""; } }, set(v) { try { localStorage.setItem("rot_nome", v); } catch {} } };
+
+let r = null;
+let ocupado = false;
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3200);
+}
+
+async function carregar() {
+  if (!TOKEN) return erro("Este link está incompleto. Peça o link de novo pra Yasmin.");
+  try {
+    const res = await fetch(`${API}?t=${encodeURIComponent(TOKEN)}`);
+    const d = await res.json();
+    if (!res.ok) return erro(d.erro || "Não encontrei este roteiro.");
+    r = d; render();
+  } catch { erro("Não consegui abrir o roteiro. Confira a internet e tente de novo."); }
+}
+
+function erro(msg) {
+  $("#app").innerHTML = `<div class="vazio"><div class="assina" style="justify-content:center">${ESTRELA}<span>YASMIN<br>CARREIRA</span></div><p>${esc(msg)}</p></div>`;
+}
+
+async function enviar(corpo, ok) {
+  if (ocupado) return;
+  ocupado = true;
+  try {
+    const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ t: TOKEN, ...corpo }) });
+    const d = await res.json();
+    if (!res.ok) { toast(d.erro || "Não consegui enviar. Tente de novo."); return false; }
+    r = d; render(); toast(ok); return true;
+  } catch { toast("Não consegui enviar. Confira a internet e tente de novo."); return false; }
+  finally { ocupado = false; }
+}
+
+function render() {
+  document.title = `Roteiro ${r.marca ? r.marca + " · " : ""}${r.titulo}`;
+  const aprovado = !!r.aprovado_em;
+  const cenas = Array.isArray(r.cenas) ? r.cenas : [];
+  const dois = r.gancho && r.gancho2;
+  const ganchos = [r.gancho, r.gancho2].map((g, i) => g ? { n: i + 1, g } : null).filter(Boolean);
+  const coments = (i) => r.comentarios.filter((c) => (i === null ? c.cena === null : c.cena === i));
+  const listaComent = (i) => {
+    const l = coments(i);
+    return l.length ? `<div class="coments">${l.map((c) => `<div class="coment"><b>${esc(c.nome || r.marca || "Marca")} · ${dataBr(c.created_at)}</b><p>${esc(c.texto)}</p></div>`).join("")}</div>` : "";
+  };
+  const comentar = (i) => aprovado ? "" : `<button class="btn peq" data-comentar="${i}">Comentar</button>`;
+  const logo = r.marca_logo ? `<img class="logo" src="${esc(r.marca_logo)}" alt="Logo ${esc(r.marca)}">` : r.marca ? `<div class="logo logo-letra" aria-hidden="true">${esc(r.marca.trim()[0].toUpperCase())}</div>` : "";
+
+  $("#app").innerHTML = `
+    <header class="topo">
+      <div class="assina">${ESTRELA}<span>YASMIN<br>CARREIRA</span></div>
+      <div class="doc">Roteiro para aprovação<br>enviado em ${dataBr(r.enviado_em)}</div>
+    </header>
+    <div class="cabeca">
+      ${logo}
+      <div>${r.marca ? `<p class="marca">${esc(r.marca)}</p>` : ""}<h1>${esc(r.titulo)}</h1></div>
+    </div>
+    <div class="chips"><span class="chip">${esc(r.formato)}</span><span class="chip">${cenas.length} ${cenas.length === 1 ? "cena" : "cenas"}</span>${dois ? `<span class="chip">2 opções de gancho</span>` : ""}</div>
+
+    ${aprovado ? `<div class="aprovado">${CHECK}<span>Roteiro aprovado por ${esc(r.aprovado_por)} em ${dataBr(r.aprovado_em)}. Obrigada!</span></div>` : `
+    <div class="passos"><b>Como funciona</b><ol>
+      ${dois ? "<li>Escolha o gancho que você prefere.</li>" : ""}
+      <li>Se quiser ajustar algo, toque em <b>Comentar</b> na cena.</li>
+      <li>No final, escreva seu nome e toque em <b>Aprovar roteiro</b>.</li>
+    </ol></div>`}
+
+    ${ganchos.length ? `
+      <h2>${dois ? "Escolha o gancho" : "Gancho"}</h2>
+      <p class="sub">Os primeiros segundos do vídeo, que seguram quem está assistindo.</p>
+      <div class="ganchos" role="radiogroup" aria-label="Ganchos">
+        ${ganchos.map(({ n, g }) => `
+          <button class="gancho ${r.gancho_escolhido === n ? "on" : ""}" role="radio" aria-checked="${r.gancho_escolhido === n}" data-gancho="${n}" ${aprovado || !dois ? "disabled" : ""}>
+            <b>Gancho ${n}${r.gancho_escolhido === n ? " · escolhido" : ""}</b><span>${esc(g)}</span>
+          </button>`).join("")}
+      </div>` : ""}
+
+    ${cenas.length ? `<h2>Roteiro</h2><p class="sub">O que eu falo e o que aparece em cada parte do vídeo.</p>` : ""}
+    ${cenas.map((c, i) => {
+      const ref = String(c.referencia || "").trim();
+      return `
+      <article class="cena" id="cena-${i}">
+        <div class="cena-topo"><div class="parte"><i>${i + 1}</i>${esc(c.parte || `Cena ${i + 1}`)}</div>${comentar(i)}</div>
+        <div class="colunas">
+          <div class="bloco audio"><small>Áudio · o que eu falo</small><p>${esc(c.audio) || "-"}</p></div>
+          <div class="bloco imagem"><small>Imagem · o que aparece</small><p>${esc(c.imagem) || "-"}</p></div>
+        </div>
+        ${ref && ehLink(ref) ? (ehFoto(ref) ? `<img class="ref-foto" src="${esc(ref)}" alt="Referência da cena ${i + 1}" loading="lazy">` : `<a class="btn peq ref-btn" href="${esc(ref)}" target="_blank" rel="noopener">Ver referência</a>`) : ref ? `<div class="bloco" style="margin-top:10px"><small>Referência</small><p>${esc(ref)}</p></div>` : ""}
+        ${listaComent(i)}
+        <div class="form-slot"></div>
+      </article>`;
+    }).join("")}
+
+    ${r.cta ? `<h2>Chamada final</h2><div class="cta">${esc(r.cta)}</div>` : ""}
+
+    <article class="cena" id="cena-geral" style="margin-top:22px">
+      <div class="cena-topo"><div class="parte">Comentário geral</div>${comentar(null)}</div>
+      ${coments(null).length ? "" : `<p class="sub" style="margin:0">Algo que vale pro roteiro todo.</p>`}
+      ${listaComent(null)}
+      <div class="form-slot"></div>
+    </article>
+
+    ${aprovado ? "" : `
+    <section class="aprova" aria-labelledby="ap-t">
+      <h2 id="ap-t">Aprovar roteiro</h2>
+      <p class="sub" style="margin:0">Depois de aprovado eu já começo a gravar.</p>
+      <label for="ap-nome">Seu nome</label>
+      <input id="ap-nome" maxlength="80" autocomplete="name" value="${esc(nomeSalvo.get())}">
+      <label for="ap-obs">Observação (opcional)</label>
+      <textarea id="ap-obs" maxlength="1500" placeholder="Ex: aprovado, só mudar a cor da camiseta"></textarea>
+      ${dois && !r.gancho_escolhido ? `<p class="aviso">Escolha um dos ganchos lá em cima antes de aprovar.</p>` : ""}
+      <button class="btn escuro" id="ap-btn" ${dois && !r.gancho_escolhido ? "disabled" : ""}>${CHECK} Aprovar roteiro</button>
+    </section>`}
+
+    <p class="rodape">Roteiro feito por Yasmin Carreira · yasmincarreira.com</p>`;
+
+  document.querySelectorAll("[data-gancho]").forEach((b) => b.addEventListener("click", () => {
+    const n = Number(b.dataset.gancho);
+    if (n !== r.gancho_escolhido) enviar({ acao: "gancho", gancho: n, nome: nomeSalvo.get() }, `Gancho ${n} escolhido.`);
+  }));
+  document.querySelectorAll("[data-comentar]").forEach((b) => b.addEventListener("click", () => abrirComentario(b)));
+  $("#ap-btn")?.addEventListener("click", async () => {
+    const nome = $("#ap-nome").value.trim();
+    if (!nome) { toast("Escreva seu nome pra aprovar."); $("#ap-nome").focus(); return; }
+    nomeSalvo.set(nome);
+    if (await enviar({ acao: "aprovar", nome, texto: $("#ap-obs").value }, "Roteiro aprovado. Obrigada!")) scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+
+function abrirComentario(b) {
+  const cena = b.dataset.comentar === "null" ? null : Number(b.dataset.comentar);
+  const slot = $(".form-slot", b.closest(".cena"));
+  if (slot.innerHTML) { slot.innerHTML = ""; return; }
+  slot.innerHTML = `
+    <div class="form-coment">
+      <textarea maxlength="1500" placeholder="O que você quer ajustar?" aria-label="Comentário"></textarea>
+      <input maxlength="80" placeholder="Seu nome" aria-label="Seu nome" autocomplete="name" value="${esc(nomeSalvo.get())}">
+      <div class="form-acoes"><button class="btn peq" data-cancela>Cancelar</button><button class="btn peq escuro" data-envia>Enviar comentário</button></div>
+    </div>`;
+  const ta = $("textarea", slot);
+  ta.focus();
+  $("[data-cancela]", slot).addEventListener("click", () => (slot.innerHTML = ""));
+  $("[data-envia]", slot).addEventListener("click", () => {
+    const texto = ta.value.trim();
+    const nome = $("input", slot).value.trim();
+    if (!texto) { toast("Escreva o comentário."); ta.focus(); return; }
+    if (nome) nomeSalvo.set(nome);
+    const alvo = cena === null ? "cena-geral" : `cena-${cena}`;
+    enviar({ acao: "comentario", cena, texto, nome }, "Comentário enviado. Obrigada!").then((ok) => ok && document.getElementById(alvo)?.scrollIntoView({ block: "center" }));
+  });
+}
+
+carregar();
+</script>
+</body>
+</html>

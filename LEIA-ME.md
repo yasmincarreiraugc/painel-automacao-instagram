@@ -99,6 +99,7 @@ supabase functions deploy ig-scheduler      --no-verify-jwt
 supabase functions deploy ig-token-refresh  --no-verify-jwt
 supabase functions deploy ig-insights
 supabase functions deploy ig-media
+supabase functions deploy roteiro-cliente   --no-verify-jwt
 ```
 
 - A `instagram-webhook` **precisa ser pública** (`--no-verify-jwt`; no painel: desligar
@@ -235,3 +236,10 @@ ANTHROPIC_API_KEY=sua chave do console.anthropic.com
 
 Coloque em Supabase > Edge Functions > Secrets (ou `supabase secrets set ANTHROPIC_API_KEY=...`).
 Cada análise custa poucos centavos de dólar; a pesquisa do Em alta usa busca na web e custa um pouco mais.
+
+## Roteiro pra aprovação da marca
+
+No editor de roteiro, "Salvar e enviar pra marca" gera um link (frontend/roteiro.html) onde a marca escolhe o gancho, comenta nas cenas e aprova.
+O banco é o `supabase/sql/13_roteiro_cliente.sql`. A função é a `roteiro-cliente` (publicada com `--no-verify-jwt`).
+Aviso por e-mail (Resend, grátis): crie a conta em resend.com com o mesmo e-mail que vai receber os avisos e gere uma API key. Depois:
+`supabase secrets set RESEND_API_KEY=... AVISO_EMAIL=seu@email.com`

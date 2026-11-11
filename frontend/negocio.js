@@ -757,10 +757,15 @@ window.Negocio = (() => {
 })();
 
 // ---------------------------------------------------------------------
-// ROTEIROS: quadro por etapa (ideia > escrevendo > pronto > gravado > postado)
+// ROTEIROS: quadro por etapa (ideia > escrevendo > pronto > gravado > postado).
+// Cada roteiro tem 2 ganchos e cenas (parte, áudio, imagem, referência).
+// "Salvar e enviar pra marca" gera um link secreto pra roteiro.html, onde a
+// marca escolhe o gancho, comenta nas cenas e aprova. O retorno fica em
+// roteiro_feedback e aparece no card e no editor.
 // ---------------------------------------------------------------------
 window.Roteiros = (() => {
   const db = tabela("roteiros", "updated_at");
+  const fbDb = tabela("roteiro_feedback");
   const ETAPAS = [
     { id: "ideia", nome: "Ideia", cor: "#fff2c2" },
     { id: "escrevendo", nome: "Escrevendo", cor: "#ffd6ef" },
@@ -771,12 +776,16 @@ window.Roteiros = (() => {
   const FORMATOS = ["reels", "tiktok", "ugc", "stories", "carrossel"];
   let lista = [];
   let campanhas = [];
+  let feedback = [];
   let busca = "";
   let ligado = false;
 
   async function carregar() {
-    try { [lista, campanhas] = await Promise.all([db.listar(), tabela("campanhas").listar()]); }
-    catch (e) { console.warn(e); toast("Não consegui carregar os roteiros.", "err"); }
+    try {
+      [lista, campanhas, feedback] = await Promise.all([
+        db.listar(), tabela("campanhas").listar(), fbDb.listar().catch(() => []),
+      ]);
+    } catch (e) { console.warn(e); toast("Não consegui carregar os roteiros.", "err"); }
     return lista;
   }
 
@@ -787,11 +796,22 @@ window.Roteiros = (() => {
     render();
   }
 
-  const marcaDe = (r) => campanhas.find((c) => c.id === r.campanha_id)?.marca || "";
+  const marcaDe = (r) => r.marca_nome || campanhas.find((c) => c.id === r.campanha_id)?.marca || "";
+  const linkDe = (r) => new URL(`roteiro.html?t=${r.link_token}`, location.href.split("#")[0]).href;
+  const fbDe = (r) => feedback.filter((f) => f.roteiro_id === r.id);
+  const dataHora = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  function selo(r) {
+    if (r.aprovado_em) return `<span class="chip rot-aprovado">${icon("check")} aprovado</span>`;
+    const novos = fbDe(r).filter((f) => !f.lido).length;
+    if (novos) return `<span class="chip rot-novo">${novos} ${novos === 1 ? "retorno novo" : "retornos novos"}</span>`;
+    if (r.enviado_em) return `<span class="chip rot-espera">com a marca</span>`;
+    return "";
+  }
 
   function render() {
     const q = busca.trim().toLowerCase();
-    const vis = lista.filter((r) => !q || [r.titulo, r.gancho, r.texto, marcaDe(r)].some((v) => String(v || "").toLowerCase().includes(q)));
+    const vis = lista.filter((r) => !q || [r.titulo, r.gancho, r.gancho2, r.texto, marcaDe(r)].some((v) => String(v || "").toLowerCase().includes(q)));
     $("#roteiros-conteudo").innerHTML = `
       <div class="rot-barra">
         <input type="search" class="input" id="rot-busca" placeholder="Buscar roteiro, marca ou gancho" value="${esc(busca)}" aria-label="Buscar roteiros">
@@ -805,7 +825,7 @@ window.Roteiros = (() => {
             <header><span>${e.nome}</span><b>${col.length}</b></header>
             ${col.map((r) => `
               <article class="rot" data-rot="${r.id}" tabindex="0" role="button" aria-label="Abrir roteiro ${esc(r.titulo)}">
-                <div class="rot-tags"><span class="chip">${esc(r.formato)}</span>${marcaDe(r) ? `<span class="chip marca-chip">${esc(marcaDe(r))}</span>` : ""}</div>
+                <div class="rot-tags"><span class="chip">${esc(r.formato)}</span>${marcaDe(r) ? `<span class="chip marca-chip">${esc(marcaDe(r))}</span>` : ""}${selo(r)}</div>
                 <h3>${esc(r.titulo)}</h3>
                 ${r.gancho ? `<p>"${esc(r.gancho.slice(0, 110))}${r.gancho.length > 110 ? "..." : ""}"</p>` : ""}
                 ${r.data_gravacao ? `<small>${icon("video")} gravar ${diaMes(r.data_gravacao)}</small>` : ""}
@@ -824,10 +844,93 @@ window.Roteiros = (() => {
     $$("[data-rot-novo]").forEach((b) => b.addEventListener("click", () => editar(null)));
   }
 
+  // Roteiros antigos só tinham o texto corrido: cada parágrafo vira uma cena.
+  function cenasIniciais(r) {
+    if (Array.isArray(r?.cenas) && r.cenas.length) return r.cenas.map((c) => ({ ...c }));
+    const blocos = String(r?.texto || "").split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
+    if (!blocos.length) return [{ parte: "Cena 1", audio: "", imagem: "", referencia: "" }];
+    return blocos.map((b, i) => {
+      const m = b.match(/^([^:\n]{1,30}):\s*([\s\S]*)$/);
+      return { parte: m ? m[1].trim() : `Cena ${i + 1}`, audio: m ? m[2].trim() : b, imagem: "", referencia: "" };
+    });
+  }
+
+  async function subirImagem(arquivo) {
+    if (!sb) throw new Error("No modo de teste não dá pra enviar imagens.");
+    if (!arquivo.type.startsWith("image/")) throw new Error("Escolha uma imagem (png, jpg ou webp).");
+    if (arquivo.size > 5 * 1024 * 1024) throw new Error("A imagem passa de 5 MB.");
+    const ext = (arquivo.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const caminho = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await sb.storage.from("roteiros").upload(caminho, arquivo, { contentType: arquivo.type });
+    if (error) throw error;
+    return sb.storage.from("roteiros").getPublicUrl(caminho).data.publicUrl;
+  }
+
+  // Botão "Enviar foto": abre o seletor e põe o link da imagem no campo.
+  function escolherImagem(campo, depois) {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "image/*";
+    inp.addEventListener("change", async () => {
+      const arq = inp.files?.[0];
+      if (!arq) return;
+      toast("Enviando imagem...", "info");
+      try { campo.value = await subirImagem(arq); campo.dispatchEvent(new Event("input")); depois?.(); toast("Imagem enviada.", "ok"); }
+      catch (e) { console.warn(e); toast(e.message || "Não consegui enviar a imagem.", "err"); }
+    });
+    inp.click();
+  }
+
+  function cenaHtml(c, i) {
+    return `
+      <div class="ro-cena" data-cena>
+        <div class="ro-cena-topo">
+          <span class="ro-num">${i + 1}</span>
+          <input class="input" data-c="parte" maxlength="60" value="${esc(c.parte)}" aria-label="Parte" placeholder="Cena ${i + 1}">
+          <button class="icon-btn" type="button" data-cena-sobe title="Subir" aria-label="Subir cena" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="icon-btn" type="button" data-cena-tira title="Tirar cena" aria-label="Tirar cena">${icon("trash")}</button>
+        </div>
+        <div class="ro-cena-cols">
+          <div><label class="label">Áudio <span class="nota">o que eu falo</span></label><textarea class="input" data-c="audio" rows="3" maxlength="2000">${esc(c.audio)}</textarea></div>
+          <div><label class="label">Imagem <span class="nota">o que aparece</span></label><textarea class="input" data-c="imagem" rows="3" maxlength="2000">${esc(c.imagem)}</textarea></div>
+        </div>
+        <label class="label">Referência <span class="nota">link de vídeo ou foto</span></label>
+        <div class="ro-ref">
+          <input class="input" data-c="referencia" maxlength="600" value="${esc(c.referencia)}" placeholder="https://...">
+          <button class="btn sm" type="button" data-cena-foto>${icon("image")} Enviar foto</button>
+        </div>
+      </div>`;
+  }
+
+  function feedbackHtml(r) {
+    const l = fbDe(r);
+    if (!r.enviado_em) return "";
+    const rotulo = { gancho: "escolheu", comentario: "comentou", aprovacao: "aprovou" };
+    return `
+      <div class="ro-retorno">
+        <div class="ro-retorno-topo">
+          <b>Retorno da marca</b>
+          <span class="nota">enviado em ${dataHora(r.enviado_em)}</span>
+        </div>
+        <div class="ro-retorno-status">
+          ${r.aprovado_em ? `<span class="chip rot-aprovado">${icon("check")} aprovado por ${esc(r.aprovado_por)} em ${dataHora(r.aprovado_em)}</span>` : `<span class="chip rot-espera">esperando aprovação</span>`}
+          ${r.gancho_escolhido ? `<span class="chip">gancho ${r.gancho_escolhido} escolhido</span>` : ""}
+        </div>
+        ${l.length ? `<ul class="ro-fb">${l.slice().sort((a, b) => a.created_at.localeCompare(b.created_at)).map((f) => `
+          <li class="${f.lido ? "" : "novo"}">
+            <small>${esc(f.nome || "Marca")} ${rotulo[f.tipo]} · ${esc(f.parte)} · ${dataHora(f.created_at)}</small>
+            ${f.texto ? `<p>${esc(f.texto)}</p>` : ""}
+          </li>`).join("")}</ul>` : `<p class="nota" style="margin:6px 0 0">A marca ainda não mexeu no roteiro.</p>`}
+      </div>`;
+  }
+
   function editar(r) {
+    let cenas = cenasIniciais(r);
+    const temCenasSalvas = Array.isArray(r?.cenas) && r.cenas.length;
     const d = janela("rot-dialog", `
       <form method="dialog" id="rot-form" class="rot-form">
         <h2>${r ? "Editar roteiro" : "Novo roteiro"}</h2>
+        ${r ? feedbackHtml(r) : ""}
         <label class="label" for="ro-titulo">Título</label>
         <input class="input" id="ro-titulo" required maxlength="120" value="${esc(r?.titulo || "")}" placeholder="Ex: 3 erros ao lavar o cabelo">
         <div class="dialogo-linha quatro">
@@ -836,34 +939,96 @@ window.Roteiros = (() => {
           <div><label class="label" for="ro-camp">Marca / campanha</label><select class="input" id="ro-camp"><option value="">Sem campanha cadastrada</option>${campanhas.map((c) => `<option value="${c.id}" ${r?.campanha_id === c.id ? "selected" : ""}>${esc(c.marca)}</option>`).join("")}</select></div>
           <div><label class="label" for="ro-data">Gravar em</label><input class="input" id="ro-data" type="date" value="${r?.data_gravacao || ""}"></div>
         </div>
-        <label class="label" for="ro-gancho">Gancho <span class="nota">os 3 primeiros segundos decidem tudo</span></label>
-        <textarea class="input" id="ro-gancho" rows="2" maxlength="500">${esc(r?.gancho || "")}</textarea>
-        <label class="label" for="ro-texto">Roteiro</label>
-        <textarea class="input" id="ro-texto" rows="9" maxlength="10000" placeholder="Cena 1: ...">${esc(r?.texto || "")}</textarea>
+        <div class="ro-marca">
+          <div class="ro-logo" id="ro-logo-previa"></div>
+          <div><label class="label" for="ro-marca-nome">Nome da marca no link <span class="nota">se ficar vazio, usa a campanha</span></label>
+            <input class="input" id="ro-marca-nome" maxlength="80" value="${esc(r?.marca_nome || "")}"></div>
+          <div><label class="label" for="ro-logo">Logo da marca</label>
+            <div class="ro-ref"><input class="input" id="ro-logo" maxlength="600" value="${esc(r?.marca_logo || "")}" placeholder="link da imagem">
+            <button class="btn sm" type="button" id="ro-logo-enviar">${icon("image")} Enviar</button></div></div>
+        </div>
+
+        <h3 class="ro-sec">Ganchos <span class="nota">a marca escolhe um dos dois</span></h3>
+        <div class="ro-ganchos">
+          <div><label class="label" for="ro-gancho">Gancho 1</label><textarea class="input" id="ro-gancho" rows="2" maxlength="500">${esc(r?.gancho || "")}</textarea></div>
+          <div><label class="label" for="ro-gancho2">Gancho 2</label><textarea class="input" id="ro-gancho2" rows="2" maxlength="500">${esc(r?.gancho2 || "")}</textarea></div>
+        </div>
+
+        <h3 class="ro-sec">Cenas</h3>
+        ${r?.texto && !temCenasSalvas ? `<p class="nota" style="margin:-4px 0 8px">Separei o texto antigo em cenas. Confira antes de salvar.</p>` : ""}
+        <div id="ro-cenas"></div>
+        <button class="rot-add ro-mais" type="button" id="ro-cena-mais">${icon("plus")} Cena</button>
+
         <label class="label" for="ro-cta">Chamada final (CTA)</label>
         <input class="input" id="ro-cta" maxlength="200" value="${esc(r?.cta || "")}" placeholder="Ex: comenta QUERO que eu te mando o link">
+        <label class="label" for="ro-texto">Anotações <span class="nota">só você vê</span></label>
+        <textarea class="input" id="ro-texto" rows="3" maxlength="10000">${esc(temCenasSalvas ? r?.texto || "" : "")}</textarea>
+
         <div class="dialogo-acoes">
           ${r ? `<button class="btn danger" type="button" id="ro-apagar">Apagar</button>` : ""}
           <span style="flex:1"></span>
-          <button class="btn" type="button" id="ro-pdf" title="Abre o roteiro pronto pra salvar em PDF e mandar pra marca">${icon("file")} PDF pra aprovação</button>
+          <button class="btn" type="button" id="ro-pdf" title="Abre o roteiro pronto pra salvar em PDF">${icon("file")} PDF</button>
           <button class="btn" type="button" id="ro-cancelar">Cancelar</button>
-          <button class="btn primary" type="submit">Salvar</button>
+          <button class="btn" type="submit" value="salvar">Salvar</button>
+          <button class="btn primary" type="submit" value="enviar">${icon("link")} ${r?.link_token ? "Salvar e ver link" : "Salvar e enviar pra marca"}</button>
         </div>
       </form>`);
     d.classList.add("largo");
+
+    const box = $("#ro-cenas", d);
+    const lerCenas = () => $$("[data-cena]", box).map((el) => Object.fromEntries($$("[data-c]", el).map((f) => [f.dataset.c, f.value.trim()])));
+    const desenhar = () => {
+      box.innerHTML = cenas.map(cenaHtml).join("");
+      $$("[data-cena]", box).forEach((el, i) => {
+        $("[data-cena-tira]", el).addEventListener("click", () => { cenas = lerCenas(); cenas.splice(i, 1); if (!cenas.length) cenas.push({ parte: "Cena 1", audio: "", imagem: "", referencia: "" }); desenhar(); });
+        $("[data-cena-sobe]", el).addEventListener("click", () => { cenas = lerCenas(); [cenas[i - 1], cenas[i]] = [cenas[i], cenas[i - 1]]; desenhar(); });
+        $("[data-cena-foto]", el).addEventListener("click", () => escolherImagem($('[data-c="referencia"]', el)));
+      });
+    };
+    desenhar();
+    $("#ro-cena-mais", d).addEventListener("click", () => {
+      cenas = lerCenas();
+      cenas.push({ parte: `Cena ${cenas.length + 1}`, audio: "", imagem: "", referencia: "" });
+      desenhar();
+      $$('[data-c="audio"]', box).at(-1).focus();
+    });
+
+    const logo = $("#ro-logo", d);
+    const previa = () => { $("#ro-logo-previa", d).innerHTML = /^https?:\/\//.test(logo.value.trim()) ? `<img src="${esc(logo.value.trim())}" alt="">` : icon("image"); };
+    logo.addEventListener("input", previa);
+    previa();
+    $("#ro-logo-enviar", d).addEventListener("click", () => escolherImagem(logo));
+
     d.showModal();
     $("#ro-titulo", d).focus();
     $("#ro-cancelar", d).addEventListener("click", () => d.close());
+
+    // Abriu o roteiro: o retorno da marca conta como visto.
+    if (r && sb) {
+      const novos = fbDe(r).filter((f) => !f.lido);
+      if (novos.length) sb.from("roteiro_feedback").update({ lido: true }).in("id", novos.map((f) => f.id))
+        .then(({ error }) => { if (!error) novos.forEach((f) => (f.lido = true)); });
+    }
+
+    const montar = () => ({
+      ...(r ? { id: r.id } : {}),
+      titulo: $("#ro-titulo", d).value.trim(),
+      status: $("#ro-status", d).value,
+      formato: $("#ro-formato", d).value,
+      campanha_id: $("#ro-camp", d).value || null,
+      data_gravacao: $("#ro-data", d).value || null,
+      marca_nome: $("#ro-marca-nome", d).value.trim(),
+      marca_logo: logo.value.trim(),
+      gancho: $("#ro-gancho", d).value.trim(),
+      gancho2: $("#ro-gancho2", d).value.trim(),
+      cenas: lerCenas().filter((c) => c.audio || c.imagem || c.referencia),
+      cta: $("#ro-cta", d).value.trim(),
+      texto: $("#ro-texto", d).value.trim(),
+    });
+
     $("#ro-pdf", d).addEventListener("click", () => {
-      const camp = campanhas.find((c) => c.id === $("#ro-camp", d).value);
-      imprimir({
-        titulo: $("#ro-titulo", d).value.trim() || "Roteiro",
-        formato: $("#ro-formato", d).value,
-        data_gravacao: $("#ro-data", d).value,
-        gancho: $("#ro-gancho", d).value.trim(),
-        texto: $("#ro-texto", d).value.trim(),
-        cta: $("#ro-cta", d).value.trim(),
-      }, camp?.marca || "");
+      const row = montar();
+      imprimir(row, row.marca_nome || campanhas.find((c) => c.id === row.campanha_id)?.marca || "");
     });
     $("#ro-apagar", d)?.addEventListener("click", async () => {
       if (!confirm(`Apagar o roteiro "${r.titulo}"?`)) return;
@@ -872,37 +1037,73 @@ window.Roteiros = (() => {
     });
     $("#rot-form", d).addEventListener("submit", async (ev) => {
       ev.preventDefault();
-      const row = {
-        ...(r ? { id: r.id } : {}),
-        titulo: $("#ro-titulo", d).value.trim(),
-        status: $("#ro-status", d).value,
-        formato: $("#ro-formato", d).value,
-        campanha_id: $("#ro-camp", d).value || null,
-        data_gravacao: $("#ro-data", d).value || null,
-        gancho: $("#ro-gancho", d).value.trim(),
-        texto: $("#ro-texto", d).value.trim(),
-        cta: $("#ro-cta", d).value.trim(),
-      };
+      const enviar = ev.submitter?.value === "enviar";
+      const row = montar();
       if (!row.titulo) return;
-      try { await db.salvar(row); d.close(); toast(r ? "Roteiro atualizado." : "Roteiro criado.", "ok"); abrir(); }
-      catch (e) { console.warn(e); toast("Não consegui salvar o roteiro.", "err"); }
+      if (enviar) {
+        if (!sb) { toast("O link pra marca só funciona com o painel online.", "warn"); return; }
+        if (!row.cenas.length && !row.gancho) { toast("Escreva o gancho e pelo menos uma cena antes de enviar.", "warn"); return; }
+        if (!row.marca_nome && !row.campanha_id) { toast("Escolha a campanha ou escreva o nome da marca.", "warn"); return; }
+        if (!r?.link_token) row.link_token = novoToken();
+        if (!r?.enviado_em) row.enviado_em = new Date().toISOString();
+        if (r?.aprovado_em && confirm(`A marca já aprovou este roteiro. Pedir uma nova aprovação?\n\n"OK" reabre pra marca aprovar de novo. "Cancelar" só salva.`)) {
+          Object.assign(row, { aprovado_por: null, aprovado_em: null, gancho_escolhido: null, enviado_em: new Date().toISOString() });
+        }
+      }
+      try {
+        const salvo = await db.salvar(row);
+        d.close();
+        toast(r ? "Roteiro atualizado." : "Roteiro criado.", "ok");
+        await abrir();
+        if (enviar) mostrarLink(salvo);
+      } catch (e) { console.warn(e); toast("Não consegui salvar o roteiro.", "err"); }
     });
   }
 
-  // Roteiro pra aprovação da marca: abre uma página com a identidade da
-  // Yasmin e já chama "Imprimir" (lá dá pra escolher "Salvar como PDF").
+  function novoToken() {
+    const b = crypto.getRandomValues(new Uint8Array(18));
+    return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function mostrarLink(r) {
+    const link = linkDe(r);
+    const marca = marcaDe(r);
+    const msg = `Oi! Segue o roteiro${marca ? ` pra ${marca}` : ""}: "${r.titulo}". Por esse link você escolhe o gancho, comenta em qualquer cena e aprova:\n${link}`;
+    const d = janela("rot-link", `
+      <div class="rot-form">
+        <h2>Link pra ${esc(marca || "marca")}</h2>
+        <p class="sub">Manda esse link pra marca. Quando ela escolher o gancho, comentar ou aprovar, aparece aqui no card e chega no seu e-mail.</p>
+        <div class="ro-ref"><input class="input" id="rl-link" readonly value="${esc(link)}" aria-label="Link do roteiro">
+          <button class="btn sm" type="button" id="rl-copiar">${icon("link")} Copiar</button></div>
+        <div class="dialogo-acoes">
+          <a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${icon("eye")} Ver como a marca vê</a>
+          <a class="btn" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${icon("chat")} Mandar no WhatsApp</a>
+          <span style="flex:1"></span>
+          <button class="btn primary" type="button" id="rl-ok">Pronto</button>
+        </div>
+      </div>`);
+    d.showModal();
+    $("#rl-ok", d).addEventListener("click", () => d.close());
+    $("#rl-copiar", d).addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(link); toast("Link copiado.", "ok"); }
+      catch { $("#rl-link", d).select(); toast("Selecionei o link: é só copiar.", "info"); }
+    });
+  }
+
+  // Roteiro em PDF: abre uma página com a identidade da Yasmin e já chama
+  // "Imprimir" (lá dá pra escolher "Salvar como PDF").
   function imprimir(r, marca) {
     const w = window.open("", "_blank");
     if (!w) { toast("O navegador bloqueou a janela. Libere os pop-ups deste site.", "warn"); return; }
     const hoje = new Date().toLocaleDateString("pt-BR");
-    const bloco = (titulo, txt) => txt ? `<section><h2>${titulo}</h2><p>${esc(txt)}</p></section>` : "";
+    const ganchos = [r.gancho, r.gancho2].filter(Boolean);
     w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
       <title>Roteiro ${esc(marca ? marca + " - " : "")}${esc(r.titulo)}</title>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Montserrat:wght@400;500;600&display=swap">
       <style>
         @page { size: A4; margin: 18mm 16mm; }
         * { box-sizing: border-box; }
-        body { font-family: Montserrat, Arial, sans-serif; color: #1e1915; margin: 0; font-size: 11.5pt; line-height: 1.55; background: #fff; }
+        body { font-family: Montserrat, Arial, sans-serif; color: #1e1915; margin: 0; font-size: 11pt; line-height: 1.5; background: #fff; }
         .topo { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e1915; padding-bottom: 12px; }
         .marca { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: .08em; font-size: 10.5pt; line-height: 1.15; }
         .marca svg { width: 30px; height: 30px; fill: #ff99d9; stroke: #1e1915; stroke-width: 2.4; stroke-linejoin: round; overflow: visible; }
@@ -912,22 +1113,21 @@ window.Roteiros = (() => {
         .info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 18px; }
         .info div { background: #f5f2ed; border-radius: 10px; padding: 8px 12px; font-size: 9.5pt; }
         .info b { display: block; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #78726d; font-weight: 600; }
-        section { margin-bottom: 16px; break-inside: avoid; }
-        h2 { font-family: "Barlow Condensed", sans-serif; font-size: 15pt; margin: 0 0 4px; }
-        section p { margin: 0; white-space: pre-wrap; }
-        section.gancho p { background: #fff2c2; border-radius: 10px; padding: 10px 14px; font-weight: 500; }
-        .aprova { border: 2px solid #1e1915; border-radius: 14px; padding: 14px 16px; margin-top: 22px; break-inside: avoid; }
-        .aprova h2 { margin-bottom: 10px; }
-        .ops { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 14px; }
-        .ops span::before { content: ""; display: inline-block; width: 13px; height: 13px; border: 1.5px solid #1e1915; border-radius: 3px; margin-right: 7px; vertical-align: -2px; }
-        .linha { border-bottom: 1px solid #c9c2b8; height: 26px; }
-        .ass { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 26px; font-size: 9pt; color: #78726d; }
-        .ass div { border-top: 1px solid #1e1915; padding-top: 4px; }
+        h2 { font-family: "Barlow Condensed", sans-serif; font-size: 15pt; margin: 16px 0 6px; }
+        .g { background: #fff2c2; border-radius: 10px; padding: 8px 12px; margin-bottom: 6px; white-space: pre-wrap; break-inside: avoid; }
+        .g b { font-size: 8.5pt; text-transform: uppercase; letter-spacing: .06em; color: #78726d; display: block; }
+        table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+        th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #78726d; padding: 4px 8px; border-bottom: 1.5px solid #1e1915; }
+        td { vertical-align: top; padding: 8px; border-bottom: 1px solid #e7e2de; white-space: pre-wrap; }
+        tr { break-inside: avoid; }
+        td:first-child { font-weight: 600; width: 16%; }
+        td a { color: #1e1915; word-break: break-all; }
+        .cta { background: #1e1915; color: #fff; border-radius: 10px; padding: 8px 12px; white-space: pre-wrap; }
         .rodape { margin-top: 22px; font-size: 8.5pt; color: #78726d; text-align: center; }
       </style></head><body>
       <div class="topo">
         <div class="marca"><svg viewBox="-3 -3 46 46"><path d="M20 0C21.6 11.5 28.5 18.4 40 20 28.5 21.6 21.6 28.5 20 40 18.4 28.5 11.5 21.6 0 20 11.5 18.4 18.4 11.5 20 0Z"/></svg><span>YASMIN<br>CARREIRA</span></div>
-        <div class="doc">Roteiro para aprovação<br>enviado em ${hoje}</div>
+        <div class="doc">Roteiro<br>${hoje}</div>
       </div>
       <h1>${marca ? `<mark>${esc(marca)}</mark> ` : ""}${esc(r.titulo)}</h1>
       <div class="info">
@@ -935,16 +1135,11 @@ window.Roteiros = (() => {
         <div><b>Formato</b>${esc(r.formato)}</div>
         <div><b>Gravação prevista</b>${r.data_gravacao ? esc(r.data_gravacao.split("-").reverse().join("/")) : "a combinar"}</div>
       </div>
-      ${r.gancho ? `<section class="gancho"><h2>Gancho (primeiros segundos)</h2><p>${esc(r.gancho)}</p></section>` : ""}
-      ${bloco("Roteiro", r.texto)}
-      ${bloco("Chamada final (CTA)", r.cta)}
-      <div class="aprova">
-        <h2>Aprovação da marca</h2>
-        <div class="ops"><span>Aprovado</span><span>Aprovado com ajustes</span><span>Precisa refazer</span></div>
-        <b style="font-size:9.5pt">Comentários e ajustes:</b>
-        <div class="linha"></div><div class="linha"></div><div class="linha"></div>
-        <div class="ass"><div>Nome e assinatura (marca)</div><div>Data</div></div>
-      </div>
+      ${ganchos.length ? `<h2>${ganchos.length > 1 ? "Opções de gancho" : "Gancho"}</h2>${ganchos.map((g, i) => `<div class="g">${ganchos.length > 1 ? `<b>Gancho ${i + 1}</b>` : ""}${esc(g)}</div>`).join("")}` : ""}
+      ${r.cenas.length ? `<h2>Roteiro</h2><table><thead><tr><th>Parte</th><th>Áudio</th><th>Imagem</th></tr></thead><tbody>
+        ${r.cenas.map((c, i) => `<tr><td>${esc(c.parte || `Cena ${i + 1}`)}</td><td>${esc(c.audio)}</td><td>${esc(c.imagem)}${c.referencia ? `<br><a href="${esc(c.referencia)}">referência</a>` : ""}</td></tr>`).join("")}
+      </tbody></table>` : ""}
+      ${r.cta ? `<h2>Chamada final (CTA)</h2><div class="cta">${esc(r.cta)}</div>` : ""}
       <p class="rodape">yasmincarreira.com</p>
       <script>document.fonts.ready.then(() => setTimeout(() => window.print(), 300));<\/script>
       </body></html>`);

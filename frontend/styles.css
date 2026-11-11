@@ -1051,3 +1051,38 @@ label.seg { display: inline-flex; align-items: center; cursor: pointer; }
   .semana-quadro .semana-topo { grid-template-columns: 1fr; }
   .semana-dias .dia30 { flex-basis: 72%; }
 }
+
+/* ---------- Roteiros: cenas, ganchos e retorno da marca ---------- */
+.rot-tags .rot-aprovado, .ro-retorno .rot-aprovado { background: #dff3dc; color: #1f6b2c; border-color: transparent; display: inline-flex; align-items: center; gap: 4px; }
+.rot-aprovado svg { width: 12px; height: 12px; }
+.rot-tags .rot-novo { background: var(--rosa); color: var(--text); border-color: transparent; font-weight: 600; }
+.rot-tags .rot-espera, .ro-retorno .rot-espera { background: var(--azul-claro); border-color: transparent; }
+.ro-sec { font-family: var(--fonte-titulo); font-size: 20px; margin: 18px 0 6px; }
+.ro-sec .nota { font-family: var(--fonte-nota); font-size: 16px; font-weight: 500; margin-left: 6px; color: var(--muted); }
+.ro-ganchos, .ro-cena-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ro-cena { background: var(--bg); border-radius: 16px; padding: 12px; margin-bottom: 10px; }
+.ro-cena-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ro-cena-topo .input { flex: 1; font-weight: 600; background: var(--surface); }
+.ro-cena .input { background: var(--surface); }
+.ro-num { width: 28px; height: 28px; border-radius: 50%; background: var(--rosa-claro); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+.ro-ref { display: flex; gap: 8px; align-items: center; }
+.ro-ref .input { flex: 1; min-width: 0; }
+.ro-ref .btn { flex: none; }
+.ro-mais { width: 100%; margin-bottom: 6px; }
+.ro-marca { display: grid; grid-template-columns: 56px 1fr 1.4fr; gap: 10px; align-items: end; margin-top: 4px; }
+.ro-logo { width: 56px; height: 56px; border-radius: 14px; background: var(--bg); display: grid; place-items: center; overflow: hidden; color: var(--muted); }
+.ro-logo img { width: 100%; height: 100%; object-fit: contain; }
+.ro-logo svg { width: 22px; height: 22px; }
+.ro-retorno { background: var(--manteiga); border-radius: 16px; padding: 12px 14px; margin: 4px 0 10px; }
+.ro-retorno-topo { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.ro-retorno-status { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.ro-fb { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; max-height: 220px; overflow: auto; }
+.ro-fb li { background: var(--surface); border-radius: 10px; padding: 8px 10px; }
+.ro-fb li.novo { box-shadow: inset 3px 0 0 var(--rosa); }
+.ro-fb small { color: var(--muted); font-size: 11.5px; }
+.ro-fb p { margin: 2px 0 0; white-space: pre-wrap; }
+@media (max-width: 760px) {
+  .ro-ganchos, .ro-cena-cols { grid-template-columns: 1fr; }
+  .ro-marca { grid-template-columns: 56px 1fr; }
+  .ro-marca > div:last-child { grid-column: 1 / -1; }
+}

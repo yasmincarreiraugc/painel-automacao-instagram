@@ -7,8 +7,9 @@
 //   estrategia_plano  -> pilares de conteúdo + plano
 //   estrategia_dias   -> monta um pedaço do calendário de 30 dias
 //   estrategia_chat   -> conversa pra ajustar a estratégia
+//   buscador          -> pesquisa marcas (UGC) ou clientes (bio link e site) na web
 // Os resultados ficam salvos no banco (painel_config, quadros, em_alta,
-// estrategia_chat). Só usuário logado no painel pode chamar.
+// estrategia_chat, prospects). Só usuário logado no painel pode chamar.
 // Segredo necessário: ANTHROPIC_API_KEY.
 // =====================================================================
 import Anthropic from "npm:@anthropic-ai/sdk@1.3.0";
@@ -297,8 +298,55 @@ Yasmin: ${msg}`,
   return { resposta: r.resposta, estrategia: novo, mudou: !!(r.objetivo || r.pilares || r.plano || r.dias?.length) };
 }
 
+
+// deno-lint-ignore no-explicit-any
+async function buscador(body: any) {
+  const tipo = body.tipo === "cliente" ? "cliente" : "marca";
+  const foco = corta(body.foco, 120).trim();
+  const regiao = corta(body.regiao, 120).trim();
+  const extra = corta(body.extra, 500).trim();
+  const { data: ja } = await db.from("prospects").select("nome, instagram").eq("tipo", tipo).limit(500);
+  const evitar = (ja ?? []).map((p: any) => p.instagram ? `@${p.instagram}` : p.nome).join(", ");
+  const pedido = tipo === "marca"
+    ? `Encontre 10 marcas brasileiras${foco ? ` do nicho "${foco}"` : " de beleza, cabelo, skincare, casa, maternidade, infantil ou fitness"} que tenham chance real de contratar uma UGC creator pequena (cerca de 1.500 seguidores).
+Prefira marcas pequenas e médias, DTC, lojas que vendem no TikTok Shop, Shopee ou site próprio, marcas que já postam vídeos de creators, têm programa de creators/embaixadoras ou anúncios com UGC. Evite gigantes que só trabalham com agência.
+Em "sinal" diga o indício concreto que você achou (ex: "posta vídeos de creators", "tem programa de embaixadoras", "anuncia com UGC").
+Em "contato" coloque o e-mail de parcerias ou marketing se for público.
+Em "mensagem", escreva a primeira DM da Yasmin pra marca: curta (até 4 frases), pessoal, citando algo real da marca, oferecendo vídeos UGC e chamando pro portfólio yasmincarreira.com.`
+    : `Encontre 10 negócios${foco ? ` do ramo "${foco}"` : " locais (salão, nail designer, estética, confeitaria, loja de roupa, clínica, personal, fotógrafo)"}${regiao ? ` em ${regiao}` : " em Peruíbe, Itanhaém, Mongaguá e Praia Grande (SP)"} que tenham Instagram ativo e se beneficiariam de um bio link, portfólio ou site.
+Prefira quem não tem site próprio, usa Linktree/link genérico, só manda pro WhatsApp ou tem a bio confusa.
+Em "sinal" diga o indício concreto (ex: "sem site", "usa Linktree", "só WhatsApp na bio").
+Em "contato" coloque WhatsApp ou e-mail se forem públicos.
+Em "mensagem", escreva a primeira DM da Yasmin: curta (até 4 frases), simpática, de vizinha de Peruíbe, elogiando algo real do perfil e oferecendo um bio link ou site que junte preços, agenda e WhatsApp.`;
+  const itens = await claude({
+    system: `Você trabalha para Yasmin Carreira (@yasmincarreira_), de Peruíbe/SP, mãe do Bernardo. Ela é UGC creator e cria bio links, portfólios e sites pra negócios.
+Você é uma pesquisadora de prospecção: só traga empresas que existem de verdade, com o @ do Instagram que você confirmou na busca. Se não confirmou o @, deixe "instagram" vazio.
+Responda sempre em português do Brasil. Nunca use travessão (o traço longo).`,
+    user: `${pedido}
+${extra ? `Pedido extra da Yasmin: ${extra}\n` : ""}Não repita estas, que ela já tem na lista: ${evitar || "(nenhuma)"}.
+Responda SOMENTE com um array JSON, sem texto antes ou depois, neste formato:
+[{"nome":"...","instagram":"usuario sem @","site":"url ou vazio","cidade":"...","nicho":"...","sinal":"...","porque":"1 ou 2 frases","mensagem":"...","contato":"...","fonte":"url onde achou"}]`,
+    web: true,
+  });
+  if (!Array.isArray(itens) || !itens.length) throw new ErroPainel("formato", "A busca não trouxe resultados. Tente de novo.");
+  const vistos = new Set((ja ?? []).map((p: any) => String(p.instagram).toLowerCase()).filter(Boolean));
+  // deno-lint-ignore no-explicit-any
+  const linhas = itens.slice(0, 12).map((i: any) => ({
+    tipo,
+    nome: corta(i.nome, 120).trim(),
+    instagram: corta(i.instagram, 40).replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/[/?].*$/, "").trim(),
+    site: corta(i.site, 300), cidade: corta(i.cidade, 80), nicho: corta(i.nicho || foco, 80),
+    sinal: corta(i.sinal, 120), porque: corta(i.porque, 500), mensagem: corta(i.mensagem, 1200),
+    contato: corta(i.contato, 200), fonte: corta(i.fonte, 300),
+  })).filter((l: any) => l.nome && !(l.instagram && vistos.has(l.instagram.toLowerCase())) && (vistos.add(l.instagram.toLowerCase()) || true));
+  if (!linhas.length) throw new ErroPainel("repetidos", "Só achei nomes que já estão na sua lista. Tente outro nicho ou região.");
+  const { data, error } = await db.from("prospects").insert(linhas).select();
+  if (error) throw error;
+  return { novos: data };
+}
+
 const MODOS: Record<string, (b: unknown) => Promise<unknown>> = {
-  analista, quadro, emalta, estrategia_plano: estrategiaPlano, estrategia_dias: estrategiaDias, estrategia_chat: estrategiaChat,
+  analista, quadro, emalta, estrategia_plano: estrategiaPlano, estrategia_dias: estrategiaDias, estrategia_chat: estrategiaChat, buscador,
 };
 
 Deno.serve(async (req) => {

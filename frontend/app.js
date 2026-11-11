@@ -267,7 +267,7 @@ window.checarRetornos = checarRetornos;
 setInterval(checarRetornos, 120000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) checarRetornos(); });
 
-const PAGINAS = ["inicio", "calendario", "roteiros", "negocio", "campanhas", "clientes", "analista", "instagram", "quadros", "emalta",
+const PAGINAS = ["inicio", "calendario", "roteiros", "negocio", "campanhas", "clientes", "buscador", "analista", "instagram", "quadros", "emalta",
   "estrategia", "site", "portfolio"];
 function irPara(pagina) {
   if (!PAGINAS.includes(pagina)) pagina = "inicio";
@@ -282,6 +282,7 @@ function irPara(pagina) {
   if (pagina === "negocio") window.Negocio?.abrir();
   if (pagina === "campanhas") window.Campanhas?.abrir();
   if (pagina === "clientes") window.Clientes?.abrir();
+  if (pagina === "buscador") window.Buscador?.abrir();
   if (pagina === "portfolio") window.Portfolio?.abrir();
   if (pagina === "analista") window.Analista?.abrir();
   if (pagina === "quadros") window.Quadros?.abrir();

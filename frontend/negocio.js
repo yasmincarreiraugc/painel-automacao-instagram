@@ -1,5 +1,5 @@
 // =====================================================================
-// negocio.js: Campanhas, Clientes, Visão geral e Roteiros.
+// negocio.js: Campanhas, Clientes, Visão geral, Buscador e Roteiros.
 // Dados no Supabase (tabelas campanhas, clientes e roteiros). No modo de teste
 // local, ficam guardados no navegador.
 // Usa as peças do app.js: sb, $, $$, esc, fmt, icon, toast, store.
@@ -1150,6 +1150,211 @@ window.Roteiros = (() => {
     if (ligado) return;
     ligado = true;
     $("#roteiro-novo").addEventListener("click", async () => { if (!campanhas.length) await carregar(); editar(null); });
+  }
+
+  return { abrir, carregar };
+})();
+
+// ---------------------------------------------------------------------
+// BUSCADOR: marcas pra abordar com UGC e negócios que podem virar
+// clientes de bio link, portfólio e site. "Buscar" pesquisa na web
+// (claude-ia, modo buscador); "Adicionar" cadastra na mão. O status
+// acompanha a abordagem (novo > abordado > respondeu > fechou).
+// ---------------------------------------------------------------------
+window.Buscador = (() => {
+  const db = tabela("prospects", "created_at");
+  const TIPOS = {
+    marca: { nome: "Marcas pra UGC", foco: "Nicho", ex: "cabelo, skincare, maternidade, casa", icone: "briefcase" },
+    cliente: { nome: "Clientes pra bio link e site", foco: "Ramo", ex: "salão, nail designer, confeitaria", icone: "users" },
+  };
+  const STATUS = [
+    { id: "novo", nome: "Novo" },
+    { id: "abordado", nome: "Abordei" },
+    { id: "respondeu", nome: "Respondeu" },
+    { id: "fechou", nome: "Fechou" },
+    { id: "descartado", nome: "Descartado" },
+  ];
+  const MENSAGEM = {
+    marca: (n) => `Oi, pessoal da ${n || "marca"}! Sou a Yasmin, criadora de conteúdo UGC aqui de Peruíbe/SP. Adoro o que vocês fazem e tenho ideias de vídeos mostrando o uso real no dia a dia de mãe. Posso mandar meu portfólio? yasmincarreira.com`,
+    cliente: (n) => `Oi${n ? `, ${n}` : ""}! Tudo bem? Sou a Yasmin, aqui de Peruíbe. Vi o perfil de vocês e achei o trabalho lindo! Eu crio bio links e sites pra negócios, juntando preços, agenda e WhatsApp num lugar só. Posso te mostrar um exemplo?`,
+  };
+  let lista = [];
+  let tipo = store.get("busc_tipo") === "cliente" ? "cliente" : "marca";
+  let filtro = "ativos";
+  let buscando = false;
+
+  async function carregar() {
+    try { lista = await db.listar(); }
+    catch (e) { console.warn(e); toast("Não consegui carregar o buscador.", "err"); }
+    return lista;
+  }
+
+  async function abrir() {
+    $("#buscador-conteudo").innerHTML = `<p class="sub">Carregando...</p>`;
+    await carregar();
+    render();
+  }
+
+  const statusNome = (s) => STATUS.find((x) => x.id === s)?.nome || s;
+  const mensagemDe = (p) => p.mensagem || MENSAGEM[p.tipo](p.nome);
+
+  function render() {
+    const doTipo = lista.filter((p) => p.tipo === tipo);
+    const conta = (f) => doTipo.filter(f).length;
+    const ativo = (p) => !["fechou", "descartado"].includes(p.status);
+    const vis = doTipo.filter((p) => filtro === "todos" ? true : filtro === "ativos" ? ativo(p) : p.status === filtro);
+    const t = TIPOS[tipo];
+    $("#buscador-conteudo").innerHTML = `
+      <div class="tabs" role="tablist">
+        ${Object.entries(TIPOS).map(([id, x]) => `<button role="tab" aria-selected="${id === tipo}" class="${id === tipo ? "active" : ""}" data-busc-tipo="${id}">${icon(x.icone)} ${x.nome}</button>`).join("")}
+      </div>
+      <form class="card busc-form" id="busc-form">
+        <div class="busc-campos">
+          <div><label class="label" for="bs-foco">${t.foco}</label><input class="input" id="bs-foco" maxlength="120" placeholder="${t.ex}" value="${esc(store.get(`busc_foco_${tipo}`) || "")}"></div>
+          ${tipo === "cliente" ? `<div><label class="label" for="bs-regiao">Região</label><input class="input" id="bs-regiao" maxlength="120" value="${esc(store.get("busc_regiao") || "Peruíbe, Itanhaém, Mongaguá e Praia Grande")}"></div>` : ""}
+          <div><label class="label" for="bs-extra">Algo mais? <span class="nota">opcional</span></label><input class="input" id="bs-extra" maxlength="500" placeholder="${tipo === "marca" ? "Ex: marcas que vendem no TikTok Shop" : "Ex: só quem ainda não tem site"}"></div>
+        </div>
+        <div class="busc-acoes">
+          <button class="btn primary" type="submit" ${buscando ? "disabled" : ""}>${icon("search")} ${buscando ? "Buscando... (leva 1 ou 2 minutos)" : "Buscar 10 novos"}</button>
+          <button class="btn" type="button" id="bs-add">${icon("plus")} Adicionar na mão</button>
+        </div>
+      </form>
+      <div class="periodos" role="group" aria-label="Filtrar" style="margin:18px 0 14px">
+        ${[["ativos", `Pra abordar ${conta(ativo)}`], ...STATUS.filter((s) => s.id !== "novo").map((s) => [s.id, `${s.nome} ${conta((p) => p.status === s.id)}`]), ["todos", `Todos ${doTipo.length}`]]
+          .map(([v, txt]) => `<button class="seg ${v === filtro ? "on" : ""}" data-busc-filtro="${v}">${txt}</button>`).join("")}
+      </div>
+      ${vis.length ? `<div class="busc-grade">${vis.map(cartao).join("")}</div>` : `
+        <div class="card empty"><div class="ico">${icon("search")}</div><h2>${doTipo.length ? "Nada nesse filtro" : "Sua lista está vazia"}</h2>
+          <p>${tipo === "marca" ? "Escolha um nicho e toque em Buscar: aparecem marcas com chance de contratar UGC, com a mensagem pronta pra mandar." : "Escolha um ramo e a região e toque em Buscar: aparecem negócios sem site ou com bio fraca, com a mensagem pronta."}</p></div>`}`;
+
+    $$("[data-busc-tipo]").forEach((b) => b.addEventListener("click", () => { tipo = b.dataset.buscTipo; store.set("busc_tipo", tipo); filtro = "ativos"; render(); }));
+    $$("[data-busc-filtro]").forEach((b) => b.addEventListener("click", () => { filtro = b.dataset.buscFiltro; render(); }));
+    $("#busc-form").addEventListener("submit", (ev) => { ev.preventDefault(); buscar(); });
+    $("#bs-add").addEventListener("click", () => editar(null));
+    $$("[data-busc-copiar]").forEach((b) => b.addEventListener("click", async () => {
+      const p = lista.find((x) => x.id === b.dataset.buscCopiar);
+      try { await navigator.clipboard.writeText(mensagemDe(p)); toast("Mensagem copiada. Agora é só colar na DM.", "ok"); }
+      catch { toast("Não consegui copiar. Abra o card e copie o texto.", "warn"); }
+    }));
+    $$("[data-busc-status]").forEach((sel) => sel.addEventListener("change", async () => {
+      const p = lista.find((x) => x.id === sel.dataset.buscStatus);
+      const row = { id: p.id, status: sel.value };
+      if (sel.value === "abordado" && !p.abordado_em) row.abordado_em = hojeIso();
+      try { Object.assign(p, await db.salvar(row)); toast(`Marcado como "${statusNome(sel.value)}".`, "ok"); render(); }
+      catch (e) { console.warn(e); toast("Não consegui salvar.", "err"); }
+    }));
+    $$("[data-busc-editar]").forEach((b) => b.addEventListener("click", () => editar(lista.find((x) => x.id === b.dataset.buscEditar))));
+  }
+
+  function cartao(p) {
+    const site = /^https?:\/\//.test(p.site || "") ? p.site : "";
+    return `
+      <article class="card busc">
+        <div class="busc-topo">
+          <div>
+            <h3>${esc(p.nome)}</h3>
+            ${p.instagram ? `<a class="busc-ig" href="https://instagram.com/${encodeURIComponent(p.instagram)}" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : `<span class="nota">sem @ confirmado</span>`}
+          </div>
+          <select class="input busc-st st-busc-${p.status}" data-busc-status="${p.id}" aria-label="Status de ${esc(p.nome)}">
+            ${STATUS.map((s) => `<option value="${s.id}" ${p.status === s.id ? "selected" : ""}>${s.nome}</option>`).join("")}
+          </select>
+        </div>
+        <div class="busc-tags">
+          ${p.sinal ? `<span class="chip busc-sinal">${esc(p.sinal)}</span>` : ""}
+          ${p.nicho ? `<span class="chip">${esc(p.nicho)}</span>` : ""}
+          ${p.cidade ? `<span class="chip">${esc(p.cidade)}</span>` : ""}
+        </div>
+        ${p.porque ? `<p class="busc-porque">${esc(p.porque)}</p>` : ""}
+        <div class="busc-msg">${esc(mensagemDe(p))}</div>
+        ${p.contato ? `<p class="busc-linha">${icon("chat")} ${esc(p.contato)}</p>` : ""}
+        ${p.notas ? `<p class="busc-linha">${icon("edit")} ${esc(p.notas)}</p>` : ""}
+        <div class="busc-botoes">
+          <button class="btn sm" type="button" data-busc-copiar="${p.id}">${icon("file")} Copiar mensagem</button>
+          ${p.instagram ? `<a class="btn sm" href="https://ig.me/m/${encodeURIComponent(p.instagram)}" target="_blank" rel="noopener">${icon("instagram")} Abrir DM</a>` : ""}
+          ${site ? `<a class="btn sm" href="${esc(site)}" target="_blank" rel="noopener">${icon("globe")} Site</a>` : ""}
+          <span style="flex:1"></span>
+          <button class="icon-btn" type="button" data-busc-editar="${p.id}" title="Editar" aria-label="Editar ${esc(p.nome)}">${icon("edit")}</button>
+        </div>
+        ${p.abordado_em ? `<small class="busc-data">abordei em ${diaMes(p.abordado_em)}</small>` : ""}
+      </article>`;
+  }
+
+  async function buscar() {
+    if (buscando) return;
+    const foco = $("#bs-foco").value.trim();
+    const regiao = $("#bs-regiao")?.value.trim() || "";
+    const extra = $("#bs-extra").value.trim();
+    store.set(`busc_foco_${tipo}`, foco);
+    if (regiao) store.set("busc_regiao", regiao);
+    buscando = true;
+    render();
+    const r = await chamaIA("buscador", { tipo, foco, regiao, extra });
+    buscando = false;
+    if (r.ok) {
+      await carregar();
+      filtro = "ativos";
+      toast(`${r.resultado.novos.length} novos na lista.`, "ok");
+    } else if (r.codigo === "sem_chave" || r.codigo === "chave_invalida") {
+      toast(`A busca automática precisa da chave do Claude. Por enquanto, peça no chat do Claude Code: "busca ${tipo === "marca" ? "marcas" : "clientes"} de ${foco || "..."} pro meu buscador".`, "warn");
+    } else {
+      toast(r.erro || "A busca não funcionou. Tente de novo.", "err");
+    }
+    render();
+  }
+
+  function editar(p) {
+    const t = p?.tipo || tipo;
+    const d = janela("busc-dialog", `
+      <form method="dialog" id="busc-dform">
+        <h2>${p ? esc(p.nome) : t === "marca" ? "Adicionar marca" : "Adicionar cliente em potencial"}</h2>
+        <div class="dialogo-linha dois-col">
+          <div><label class="label" for="bd-nome">Nome</label><input class="input" id="bd-nome" required maxlength="120" value="${esc(p?.nome || "")}"></div>
+          <div><label class="label" for="bd-ig">Instagram</label><input class="input" id="bd-ig" maxlength="60" placeholder="@usuario" value="${p?.instagram ? "@" + esc(p.instagram) : ""}"></div>
+        </div>
+        <div class="dialogo-linha dois-col">
+          <div><label class="label" for="bd-nicho">${TIPOS[t].foco}</label><input class="input" id="bd-nicho" maxlength="80" value="${esc(p?.nicho || "")}"></div>
+          <div><label class="label" for="bd-cidade">Cidade</label><input class="input" id="bd-cidade" maxlength="80" value="${esc(p?.cidade || "")}"></div>
+        </div>
+        <div class="dialogo-linha dois-col">
+          <div><label class="label" for="bd-site">Site</label><input class="input" id="bd-site" maxlength="300" placeholder="https://" value="${esc(p?.site || "")}"></div>
+          <div><label class="label" for="bd-contato">Contato</label><input class="input" id="bd-contato" maxlength="200" placeholder="e-mail ou WhatsApp" value="${esc(p?.contato || "")}"></div>
+        </div>
+        <label class="label" for="bd-msg">Mensagem pra mandar</label>
+        <textarea class="input" id="bd-msg" rows="5" maxlength="1200">${esc(p ? mensagemDe(p) : MENSAGEM[t](""))}</textarea>
+        <label class="label" for="bd-notas">Anotações</label>
+        <textarea class="input" id="bd-notas" rows="2" maxlength="1000" placeholder="Ex: respondeu pedindo mídia kit">${esc(p?.notas || "")}</textarea>
+        ${p?.fonte ? `<p class="nota" style="margin:8px 0 0">Onde achei: ${/^https?:\/\//.test(p.fonte) ? `<a href="${esc(p.fonte)}" target="_blank" rel="noopener">${esc(p.fonte.slice(0, 70))}</a>` : esc(p.fonte)}</p>` : ""}
+        <div class="dialogo-acoes">
+          ${p ? `<button class="btn danger" type="button" id="bd-apagar">Apagar</button>` : ""}
+          <span style="flex:1"></span>
+          <button class="btn" type="button" id="bd-cancelar">Cancelar</button>
+          <button class="btn primary" type="submit">Salvar</button>
+        </div>
+      </form>`);
+    d.showModal();
+    $("#bd-cancelar", d).addEventListener("click", () => d.close());
+    $("#bd-apagar", d)?.addEventListener("click", async () => {
+      if (!confirm(`Apagar "${p.nome}" da lista?`)) return;
+      try { await db.apagar(p.id); d.close(); toast("Apagado.", "ok"); abrir(); }
+      catch (e) { console.warn(e); toast("Não consegui apagar.", "err"); }
+    });
+    $("#busc-dform", d).addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const row = {
+        ...(p ? { id: p.id } : { tipo: t, status: "novo", fonte: "adicionei na mão" }),
+        nome: $("#bd-nome", d).value.trim(),
+        instagram: $("#bd-ig", d).value.trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/[/?].*$/, ""),
+        nicho: $("#bd-nicho", d).value.trim(),
+        cidade: $("#bd-cidade", d).value.trim(),
+        site: $("#bd-site", d).value.trim(),
+        contato: $("#bd-contato", d).value.trim(),
+        mensagem: $("#bd-msg", d).value.trim(),
+        notas: $("#bd-notas", d).value.trim(),
+      };
+      if (!row.nome) return;
+      try { await db.salvar(row); d.close(); toast(p ? "Atualizado." : "Adicionado na lista.", "ok"); abrir(); }
+      catch (e) { console.warn(e); toast(String(e?.message || "").includes("prospects_ig_unico") ? "Esse @ já está na sua lista." : "Não consegui salvar.", "err"); }
+    });
   }
 
   return { abrir, carregar };

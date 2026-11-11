@@ -237,7 +237,35 @@ function entrarApp(email) {
   $("#who").textContent = email || "";
   $("#local-banner").hidden = !MODO_LOCAL;
   irPara(location.hash.replace("#", "") || "inicio");
+  checarRetornos();
 }
+
+// Retorno das marcas nos roteiros (gancho, comentário, aprovação): número
+// no menu Roteiros e um aviso na tela pra cada novidade ainda não avisada.
+async function checarRetornos() {
+  if (!sb || $("#app-view").hidden) return;
+  const { data, error } = await sb.from("roteiro_feedback")
+    .select("id, tipo, nome, parte, roteiros(titulo, marca_nome, campanhas(marca))")
+    .eq("lido", false).order("created_at");
+  if (error) { console.warn(error); return; }
+  const btn = $('.nav [data-page="roteiros"]');
+  let badge = $(".nav-badge", btn);
+  if (!badge) { badge = document.createElement("span"); badge.className = "nav-badge"; btn.appendChild(badge); }
+  badge.textContent = data.length;
+  badge.hidden = !data.length;
+  let avisados = [];
+  try { avisados = JSON.parse(store.get("retornos_avisados") || "[]"); } catch {}
+  const acao = { gancho: "escolheu o gancho", comentario: "comentou", aprovacao: "aprovou" };
+  data.filter((f) => !avisados.includes(f.id)).forEach((f) => {
+    const r = f.roteiros || {};
+    const marca = r.marca_nome || r.campanhas?.marca || "A marca";
+    toast(`${marca} ${acao[f.tipo]}${f.tipo === "comentario" ? ` (${f.parte})` : ""}: "${r.titulo || "roteiro"}"`, f.tipo === "aprovacao" ? "ok" : "info");
+  });
+  store.set("retornos_avisados", JSON.stringify(data.map((f) => f.id)));
+}
+window.checarRetornos = checarRetornos;
+setInterval(checarRetornos, 120000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checarRetornos(); });
 
 const PAGINAS = ["inicio", "calendario", "roteiros", "negocio", "campanhas", "clientes", "analista", "instagram", "quadros", "emalta",
   "estrategia", "site", "portfolio"];

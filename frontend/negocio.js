@@ -1007,7 +1007,7 @@ window.Roteiros = (() => {
     if (r && sb) {
       const novos = fbDe(r).filter((f) => !f.lido);
       if (novos.length) sb.from("roteiro_feedback").update({ lido: true }).in("id", novos.map((f) => f.id))
-        .then(({ error }) => { if (!error) novos.forEach((f) => (f.lido = true)); });
+        .then(({ error }) => { if (!error) { novos.forEach((f) => (f.lido = true)); window.checarRetornos?.(); } });
     }
 
     const montar = () => ({
